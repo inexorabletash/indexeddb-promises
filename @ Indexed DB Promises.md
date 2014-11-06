@@ -49,10 +49,12 @@ The `promise`, `then` and `catch` methods are conveniences to allow IDBTransacti
 
 ```js
 IDBTransaction.prototype.promise = function() {
-  // TODO: If transaction already committed, return Promise.resolve();
-  // TODO: If transaction already aborted, return Promise.reject(this.error);
-
   var tx = this;
+
+  if (tx.state === "finished") {
+    return tx.error ? Promise.reject(tx.error) : Promise.resolve();
+  }
+
   return new Promise(function(resolve, reject) {
     tx.addEventListener('commit', function() { resolve(); });
     tx.addEventListener('abort', function() { reject(tx.error); });
@@ -82,10 +84,12 @@ The `promise`, `then` and `catch` methods are conveniences to allow IDBRequest o
 
 ```js
 IDBRequest.prototype.promise = function() {
-  // TODO: If request already succeeded, return Promise.resolve(this.result);
-  // TODO: If request already failed, return Promise.reject(this.error);
-
   var request = this;
+
+  if (request.readyState === "done") {
+    return request.error ? Promise.reject(request.error) : Promise.resolve(request.result);
+  }
+
   var tx = this.transaction;
   return new Promise(function(resolve, reject) {
     request.addEventListener('success', function() { resolve(request.result); });
@@ -150,11 +154,33 @@ A few options here:
 
 ### Samples ###
 
+Here's a minimal async key/value store. For simplicity, it doesn't keep a connection open.
+
 ```js
-var openRequest = indexedDB.open('db');
-openRequest.onupgradeneeded = function() { /* ... */ }; // This is still a little gross
-openRequest.then(function() {
- // ...
-});
+function SimpleStorage(name) {
+  this.name = name;
+}
+SimpleStorage.prototype = {
+  _open: function() {
+    var r = indexedDB.open(this.name);
+    r.upgradeneeded = function(e) { e.target.result.createObjectStore('store'); };
+    return r.promise();
+  },
+
+  get: function(key) {
+    return this._open().then(function(db) {
+      return db.tx('store').objectStore('store').get(key);
+    });
+  },
+
+  set: function(key, value) {
+    return this._open().then(function(db) {
+      return db.tx('store', 'readwrite').objectStore('store').put(value, key);
+    });
+  }
+};
+
+TODO: Samples that actually use waitUntil()
+
 ```
 
