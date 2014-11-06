@@ -49,6 +49,9 @@ The `promise`, `then` and `catch` methods are conveniences to allow IDBTransacti
 
 ```js
 IDBTransaction.prototype.promise = function() {
+  // TODO: If transaction already committed, return Promise.resolve();
+  // TODO: If transaction already aborted, return Promise.reject(this.error);
+
   var tx = this;
   return new Promise(function(resolve, reject) {
     tx.addEventListener('commit', function() { resolve(); });
@@ -65,8 +68,6 @@ IDBTransaction.prototype.catch = function(onRejected) {
 };
 ```
 
-
-
 ### Requests ###
 
 ```
@@ -81,6 +82,9 @@ The `promise`, `then` and `catch` methods are conveniences to allow IDBRequest o
 
 ```js
 IDBRequest.prototype.promise = function() {
+  // TODO: If request already succeeded, return Promise.resolve(this.result);
+  // TODO: If request already failed, return Promise.reject(this.error);
+
   var request = this;
   var tx = this.transaction;
   return new Promise(function(resolve, reject) {
@@ -123,14 +127,34 @@ tx.waitUntil(
 );
 ```
 
-
-
 ### Cursors ###
 
-**TODO!**
+The requests returned when opening cursors behave differently than most requests: the `success` event can fire repeatedly. Initially when the cursor is returned, and then on each iteration of the cursor.
 
+The IDBRequest member `promise()` as defined above already only captures the first success/error result, which for `openCursor()` and `openKeyCursor()` on IDBObjectStore and IDBIndex will effectively be `Promise<IDBCursor?>`. Further iterations are lost.
+
+A few options here:
+
+* `openCursor()` could return a new type IDBCursorRequest which does not have promise() but instead an intermediary e.g. some object stream type which is TBD
+* Alternately, we could make `continue()` and `advance()` return `Promise<IDBCursor?>`, akin to https://gist.github.com/inexorabletash/8791448 
+* In either case, desperately need iteration helpers.
+* Need sample code!
 
 
 ### Concerns ###
 
 * With the `waitUntil()` mechanism it is possible to create transactions that will never complete, e.g. `waitUntil(new Promise())`. This introduces the possibility of deadlocks. But this is possible today with "busy waiting" transactions - in fact, locking primitives like Mutexes can already be created using IDB. See https://gist.github.com/inexorabletash/fbb4735a2e6e8c115a7e
+
+* Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks.
+
+
+### Samples ###
+
+```js
+var openRequest = indexedDB.open('db');
+openRequest.onupgradeneeded = function() { /* ... */ }; // This is still a little gross
+openRequest.then(function() {
+ // ...
+});
+```
+
