@@ -35,15 +35,15 @@ partial interface IDBTransaction {
 
 Transactions grow a `waitUntil()` method similar to [ExtendableEvent](https://slightlyoff.github.io/ServiceWorker/spec/service_worker/index.html#extendable-event).
 
-The transaction's *active* flag is replaced by a *state* which can be one of: "active", "inactive", "waiting", "committing", and "finished". When a transaction is created the *state* is active. If *state* is "active" at the end of a task then *state* is set to "inactive". If *state* becomes "inactive" and there are no pending requests, *state* is set to "committing" and the transaction attempts to commit. If the transaction successfully commits or aborts, *state* is set to "finished". (This matches the behavior of IDB "v1".)
+The transaction's *active* flag is replaced by a *state* which can be one of: "active", "inactive", "waiting", "committing", and "finished". When a transaction is created the *state* is active. If *state* is "active" at the end of a task then *state* is set to "inactive". If *state* becomes "inactive" and there are no pending requests, *state* is set to "committing" and the transaction attempts to commit. If the transaction successfully commits or aborts, *state* is set to "finished". *NB: This matches the behavior of IDB "v1".*
 
 If `waitUntil(p)` is called and *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned. Otherwise, *state* is set to "waiting". The transaction now waits on the Promise `p`; if `p` rejects, the transaction aborts. If `p` fulfills, the *state* is set to "committing" and the transaction attempts to commit.
 
 If a transaction is already waiting on Promise `p` and `waitUntil(q)` is called, then the transaction should instead wait on a new Promise equivalent to `p.then(() => q)`.
 
-TODO: Return a Promise dependent on the promise the transaction is waiting on, or whatever is passed in, or void?
+*TODO: Return value of waitUntil()? Options include (1) a Promise dependent on the promise the transaction is waiting on (2) just whatever is passed in, (3) `undefined`?*
 
-The `state` attribute reflects the internal *state* of the transaction. Previously the internal *active* flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope.
+The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal *active* flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope.*
 
 The `promise`, `then` and `catch` methods are conveniences to allow IDBTransaction objects to be used in Promise chains. They are equivalent to:
 
