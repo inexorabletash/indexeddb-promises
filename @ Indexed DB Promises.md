@@ -38,7 +38,7 @@ Transactions grow a `waitUntil()` method similar to [ExtendableEvent](https://sl
 
 The transaction's *active* flag is replaced by a *state* which can be one of: "active", "inactive", "waiting", "committing", and "finished". When a transaction is created the *state* is active. If *state* is "active" at the end of a task then *state* is set to "inactive". If *state* becomes "inactive" and there are no pending requests, *state* is set to "committing" and the transaction attempts to commit. If the transaction successfully commits or aborts, *state* is set to "finished". *NB: This matches the behavior of IDB "v1".*
 
-If `waitUntil(p)` is called and *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned. Otherwise, *state* is set to "waiting". The transaction now waits on the Promise `p`; if `p` rejects, the transaction aborts. If `p` fulfills, the *state* is set to "committing" and the transaction attempts to commit.
+If `waitUntil(p)` is called and *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned. Otherwise, *state* is set to "waiting". The transaction now waits on the Promise `p`; if `p` rejects, the transaction aborts. If `p` fulfills, the *state* is set to "committing" and the transaction attempts to commit. An explicit `abort()` call still also aborts the transaction immediately, and the promise resolution is ignored.
 
 If a transaction is already waiting on Promise `p` and `waitUntil(q)` is called, then the transaction should instead wait on a new Promise equivalent to `p.then(() => q)`.
 
@@ -143,13 +143,14 @@ The requests returned when opening cursors behave differently than most requests
 
 The IDBRequest member `promise()` as defined above already only captures the first success/error result, which for `openCursor()` and `openKeyCursor()` on IDBObjectStore and IDBIndex will effectively be `Promise<IDBCursor?>`. Further iterations are lost.
 
-A few options here:
+```
+partial interface IDBCursor {
+  Promise<IDBCursor?> advance([EnforceRange] unsigned long count);
+  Promise<IDBCursor?> continue(optional any key);
+};
+```
 
-* `openCursor()` could return a new type `IDBCursorRequest` which does not have promise() but instead an intermediary e.g. some object stream type (which is TBD for the web platform)
-* Alternately, we could make `continue()` and `advance()` return `Promise<IDBCursor?>`, akin to https://gist.github.com/inexorabletash/8791448 
-* In either case, desperately need iteration helpers.
-* Need sample code!
-
+The cursor iteration methods (`continue()` and `advance()`) now return `Promise<IDBCursor?>`. *NB: Previously they were void methods, so this is backwards-compatible.* The promise resolves with `null` if the iteration is complete, otherwise it is resolved with the same cursor object with the `key`, `primaryKey`, and `value` attributes will be updated as appropriate, just as with event-based iteration.
 
 ### Concerns ###
 
@@ -157,36 +158,4 @@ A few options here:
 
 * Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks.
 
-
-### Samples ###
-
-Here's a minimal async key/value store. For simplicity, it doesn't keep a connection open.
-
-```js
-function SimpleStorage(name) {
-  this.name = name;
-}
-SimpleStorage.prototype = {
-  _open: function() {
-    var r = indexedDB.open(this.name);
-    r.upgradeneeded = function(e) { e.target.result.createObjectStore('store'); };
-    return r.promise();
-  },
-
-  get: function(key) {
-    return this._open().then(function(db) {
-      return db.tx('store').objectStore('store').get(key);
-    });
-  },
-
-  set: function(key, value) {
-    return this._open().then(function(db) {
-      return db.tx('store', 'readwrite').objectStore('store').put(value, key);
-    });
-  }
-};
-```
-
-*TODO: Samples that actually use waitUntil()*
-
-
+* TODO: Adapt https://gist.github.com/inexorabletash/8791448 into a polyfill for this proposal. 
