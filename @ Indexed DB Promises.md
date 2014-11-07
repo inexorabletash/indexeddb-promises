@@ -43,7 +43,7 @@ If a transaction is already waiting on Promise `p` and `waitUntil(q)` is called,
 
 *TODO: Return value of waitUntil()? Options include (1) a Promise dependent on the promise the transaction is waiting on (2) just whatever is passed in, (3) `undefined`?*
 
-The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal *active* flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope.*
+The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope.*
 
 The `promise`, `then` and `catch` methods are conveniences to allow IDBTransaction objects to be used in Promise chains. They are equivalent to:
 
