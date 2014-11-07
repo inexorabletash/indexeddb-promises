@@ -24,7 +24,8 @@ enum IDBTransactionState {  "active", "inactive", "waiting", "committing", "fini
 
 partial interface IDBTransaction {
   readonly attribute IDBTransactionState state;
-  
+  readonly attribute DOMString[] scope;
+
   Promise<any> waitUntil(Promise<any> p);
 
   Promise<any> promise();
@@ -41,23 +42,27 @@ If `waitUntil(p)` is called and *state* is "committing" or "finished", a new Pro
 
 If a transaction is already waiting on Promise `p` and `waitUntil(q)` is called, then the transaction should instead wait on a new Promise equivalent to `p.then(() => q)`.
 
-*TODO: Return value of waitUntil()? Options include (1) a Promise dependent on the promise the transaction is waiting on (2) just whatever is passed in, (3) `undefined`?*
+*TODO: Return value of waitUntil()? Options include (1) a Promise dependent on the promise the transaction is waiting on (2) just whatever is passed in (3) `undefined`?*
 
-The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope.*
+The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope, but it was not exposed as an attribute.*
 
-The `promise`, `then` and `catch` methods are conveniences to allow IDBTransaction objects to be used in Promise chains. They are equivalent to:
+The `scope` attribute reflects the list of object stores in the transaction's *scope*, in the same order as specified during transaction creation. The list is empty for "versionchange" transactions. *NB: This is provided as a convenience; previously it was necessary for code to track this manually.*
+
+The `promise()`, `then()` and `catch()` methods are conveniences to allow IDBTransaction objects to be used in Promise chains. They are equivalent to:
 
 ```js
 IDBTransaction.prototype.promise = function() {
   var tx = this;
-
-  if (tx.state === "finished") {
-    return tx.error ? Promise.reject(tx.error) : Promise.resolve();
-  }
-
   return new Promise(function(resolve, reject) {
-    tx.addEventListener('commit', function() { resolve(); });
-    tx.addEventListener('abort', function() { reject(tx.error); });
+    if (tx.state === "finished") {
+      if (tx.error)
+        reject(tx.error);
+      else
+        resolve();
+    } else {
+      tx.addEventListener('commit', function() { resolve(); });
+      tx.addEventListener('abort', function() { reject(tx.error); });
+    }
   });
 };
 
@@ -80,20 +85,21 @@ partial interface IDBRequest {
 };
 ```
 
-The `promise`, `then` and `catch` methods are conveniences to allow IDBRequest objects to be used in Promise chains. They are equivalent to:
+The `promise()`, `then()` and `catch()` methods are conveniences to allow IDBRequest objects to be used in Promise chains. They are equivalent to:
 
 ```js
 IDBRequest.prototype.promise = function() {
   var request = this;
-
-  if (request.readyState === "done") {
-    return request.error ? Promise.reject(request.error) : Promise.resolve(request.result);
-  }
-
-  var tx = this.transaction;
   return new Promise(function(resolve, reject) {
-    request.addEventListener('success', function() { resolve(request.result); });
-    request.addEventListener('error', function() { reject(request.error); });
+    if (request.readyState === "done") {
+      if (request.error)
+        reject(request.error);
+      else
+        resolve(request.result);
+    } else {
+      request.addEventListener('success', function() { resolve(request.result); });
+      request.addEventListener('error', function() { reject(request.error); });
+    }
   });
 };
 
@@ -139,7 +145,7 @@ The IDBRequest member `promise()` as defined above already only captures the fir
 
 A few options here:
 
-* `openCursor()` could return a new type IDBCursorRequest which does not have promise() but instead an intermediary e.g. some object stream type which is TBD
+* `openCursor()` could return a new type `IDBCursorRequest` which does not have promise() but instead an intermediary e.g. some object stream type (which is TBD for the web platform)
 * Alternately, we could make `continue()` and `advance()` return `Promise<IDBCursor?>`, akin to https://gist.github.com/inexorabletash/8791448 
 * In either case, desperately need iteration helpers.
 * Need sample code!
@@ -179,8 +185,8 @@ SimpleStorage.prototype = {
     });
   }
 };
-
-TODO: Samples that actually use waitUntil()
-
 ```
+
+*TODO: Samples that actually use waitUntil()*
+
 
