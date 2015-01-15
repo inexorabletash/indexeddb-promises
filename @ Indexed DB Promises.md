@@ -159,3 +159,5 @@ The cursor iteration methods (`continue()` and `advance()`) now return `Promise<
 * Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks.
 
 * TODO: Adapt https://gist.github.com/inexorabletash/8791448 into a polyfill for this proposal. 
+
+* TODO: Add a timeout to transactions. Maybe make this mandatory if waitUntil() is used?
