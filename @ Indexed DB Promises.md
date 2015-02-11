@@ -152,6 +152,8 @@ partial interface IDBCursor {
 
 The cursor iteration methods (`continue()` and `advance()`) now return `Promise<IDBCursor?>`. *NB: Previously they were void methods, so this is backwards-compatible.* The promise resolves with `null` if the iteration is complete, otherwise it is resolved with the same cursor object with the `key`, `primaryKey`, and `value` attributes will be updated as appropriate, just as with event-based iteration.
 
+The above is the *minimum* surface area we can expose for cursors. Adding async iterator support would be a huge benefit for developers, e.g. `store.openCursor(range).forEach(function(callback) { ... });`
+
 ### Concerns ###
 
 * With the `waitUntil()` mechanism it is possible to create transactions that will never complete, e.g. `waitUntil(new Promise())`. This introduces the possibility of deadlocks. But this is possible today with "busy waiting" transactions - in fact, locking primitives like Mutexes can already be created using IDB. See https://gist.github.com/inexorabletash/fbb4735a2e6e8c115a7e
