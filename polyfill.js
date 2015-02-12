@@ -10,10 +10,13 @@
   // requests fail and the transaction may already have committed due
   // to a lack of additional requests.
   //
-  // Hack around this by running a constant series of (battery
-  // draining) dummy requests against an arbitrary store and
-  // maintaining a custom request queue if the transaction is
-  // in a Promise-friendly "waiting" state
+  // When a transaction is waiting on a Promise, a custom queue of
+  // requests is maintained and a series of (battery draining) dummy
+  // requests against an arbitrary store is made. When the underlying
+  // transaction is active during the responses, the queue of real
+  // requests is processed. When the waiting Promise resolves, the
+  // dummy request spinning stops and the transaction is allowed
+  // to auto-commit.
 
   // Implementation Details
   // ----------------------
@@ -23,19 +26,27 @@
   // * Every IDBRequest instance should be augmented with _promise
   //   that resolves on the first success/error event on the request.
   //
-  // * Every IDBCursor instance should be augmented with _request that
-  //   holds the associated IDBRequest.
+  // * Every IDBCursor instance is augmented with _request that holds
+  //   the associated IDBRequest. This is used when continue() or
+  //   advance() is called, so that the original request's next event
+  //   can resolve a returned Promise.
 
   // TODO/Known Issues
   // -----------------
-  // * IDBOpenDBRequest is not augmented, so database open/upgrade/delete
-  //   don't get promise wrappers.
+  //
+  // * IDBFactory methods and IDBOpenDBRequest are not augmented, so
+  //   database open/upgrade/delete don't get promise wrappers.
+  //
   // * Polyfilled methods will fail for 'versionchange' transactions
   //   if there are no object stores (e.g. in a brand new database).
+  //
   // * When making calls on a 'waiting' transaction, exceptions from
   //   invalid arguments are not handled.
+  //
   // * Non-waited transactions never report state as 'committing'
+  //
   // * Behavior when a waiting promise rejects is not clearly defined.
+  //
   // * IDBCursor helpers (e.g. 'forEach') are not implemented
 
   // --------------------------------------------
@@ -118,13 +129,25 @@
       waitUntil: {
         value: function(p) {
           var $this = this;
-          if (this.state === 'committing' || this.state === 'finished')
-            return Promise.reject(
-              makeDOMException(
-                'InvalidStateError',
-                'The transaction is already committing or finished.'));
+          var state = this.state;
 
-          if (this._state === 'waiting') {
+          if (state === 'inactive') {
+            // Throw or Reject?
+            return Promise.reject(makeDOMException(
+              'InvalidStateError', 'The transaction is inactive.'));
+          }
+
+          if (state === 'committing') {
+            return Promise.reject(makeDOMException(
+              'InvalidStateError', 'The transaction is already committing.'));
+          }
+
+          if (state === 'finished') {
+            return Promise.reject(makeDOMException(
+              'InvalidStateError', 'The transaction is finished.'));
+          }
+
+          if (state === 'waiting') {
             // Already waiting on q, now wait on q.then(() => p)
             p = this._waitingPromise.then(function() { return p; });
           } else {
