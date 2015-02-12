@@ -60,7 +60,7 @@ IDBTransaction.prototype.promise = function() {
       else
         resolve();
     } else {
-      tx.addEventListener('commit', function() { resolve(); });
+      tx.addEventListener('complete', function() { resolve(); });
       tx.addEventListener('abort', function() { reject(tx.error); });
     }
   });
