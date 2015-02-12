@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<script src="polyfill.js"></script>
+<script>
+
+function sleep(ms) {
+  return new Promise(function(resolve) {
+    setTimeout(resolve, ms);
+  });
+}
+
+var r = indexedDB.open('db' + Date.now());
+r.onupgradeneeded = function() {
+  var db = r.result;
+  var s = db.createObjectStore('squares');
+  for (var i = 0; i < 10; ++i) {
+    s.put(i * i, i);
+  }
+};
+
+r.onsuccess = function() {
+  var db = r.result;
+  var tx = db.transaction('squares');
+  var s = tx.objectStore('squares');
+  console.log('state >> ' + tx.state);
+  tx.waitUntil(
+    s.get(3)
+     .then(function(result) {
+       console.log('state >> ' + tx.state);
+       console.log(' >> ' + result);
+       return sleep(10);
+     })
+     .then(function() {
+       console.log('state >> ' + tx.state);
+       return s.get(5)
+     })
+     .then(function(result) {
+       console.log('state >> ' + tx.state);
+       console.log(' >> ' + result);
+       return sleep(10);
+     })
+  );
+
+  tx.then(function() {
+    console.log('tx then, state >> ' + tx.state);
+  }, function() {
+    console.log('tx caught, state >> ' + tx.state);
+  });
+};
+
+</script>
