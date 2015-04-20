@@ -1,6 +1,10 @@
 ## Indexed DB + Promises #3 ##
 
-Further thinking about what a Promise-friendly version of IDB could look like. See also:
+Further thinking about what a Promise-friendly version of IDB could look like. 
+
+> STATUS: Serious proposal, but may want to solve pan-storage transactions first. Actively soliciting feedback.
+
+See also:
 
 * https://github.com/slightlyoff/Promises/tree/master/historical_interest/reworked_APIs/IndexedDB - by @slightlyoff
 * [Earlier thoughts #1](https://gist.github.com/inexorabletash/8791448)
