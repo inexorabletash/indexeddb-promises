@@ -185,21 +185,9 @@
       },
 
       promise: {
-        value: function() {
+        get: function() {
           return Promise.resolve(this._promise);
-        }
-      },
-
-      then: {
-        value: function(onFulfilled, onRejected) {
-          return this._promise.then(onFulfilled, onRejected);
-        }
-      },
-
-      catch: {
-        value: function(onRejected) {
-          return this._promise.catch(onRejected);
-        }
+        }, enumerable: true, configurable: true
       }
     });
 
@@ -270,21 +258,10 @@
       return undefined;
     },
 
-    // New Methods
-    promise: function() {
+    get promise() {
       if (this._request)
         return this._request.promise.apply(this._request, arguments);
       return Promise.resolve(this._promise);
-    },
-    then: function(onFulfilled, onRejected) {
-      if (this._request)
-        return this._request.then.apply(this._request, arguments);
-      return this.promise().then(onFulfilled, onRejected);
-    },
-    catch: function(onRejected) {
-      if (this._request)
-        return this._request.catch.apply(this._request, arguments);
-      return this.promise().catch(onRejected);
     },
 
     // Called when the real IDBRequest is ready.
@@ -427,27 +404,15 @@
     });
   });
 
-  // IDBRequest convenience methods: promise(), then(), catch()
+  // IDBRequest convenience attribute: promise
   // These use _promise which will only resolve on the first success/error.
   Object.defineProperties(
     IDBRequest.prototype, {
       promise: {
-        value: function() {
+        get: function() {
           if (!this._promise) throw Error('unhooked request');
           return Promise.resolve(this._promise);
-        }
-      },
-      then: {
-        value: function(onFulfilled, onRejected) {
-          if (!this._promise) throw Error('unhooked request');
-          return this._promise.then(onFulfilled, onRejected);
-        }
-      },
-      catch: {
-        value: function(onRejected) {
-          if (!this._promise) throw Error('unhooked request');
-          return this._promise.catch(onRejected);
-        }
+        }, enumerable: true, configurable: true
       }
     });
 

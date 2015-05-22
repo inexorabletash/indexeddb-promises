@@ -29,12 +29,9 @@ enum IDBTransactionState {  "active", "inactive", "waiting", "committing", "fini
 partial interface IDBTransaction {
   readonly attribute IDBTransactionState state;
   readonly attribute DOMString[] objectStoreNames; // implemented in FF
+  readonly attribute Promise<any> promise;
 
   Promise<any> waitUntil(Promise<any> p);
-
-  Promise<any> promise();
-  Promise<any> then(SuccessCallback onFulfilled, optional ErrorCallback onRejected);
-  Promise<any> catch(ErrorCallback onRejected);
 };
 ```
 
@@ -52,10 +49,10 @@ The `state` attribute reflects the internal *state* of the transaction. *NB: Pre
 
 The `objectStoreNames` attribute reflects the list of names of object stores in the transaction's *scope*, in sorted order. For "versionchange" transactions this is the same as that returned by the `IDBDatabase`'s `objectStoreNames` attribute. *NB: This is provided as a convenience; previously it was necessary for code to track this manually. Firefox already implements this.*
 
-The `promise()`, `then()` and `catch()` methods are conveniences to allow IDBTransaction objects to be used in Promise chains. They are equivalent to:
+The `promise` attribute is a convenience to allow IDBTransaction objects to be used in Promise chains. It is equivalent to:
 
 ```js
-IDBTransaction.prototype.promise = function() {
+Object.defineProperty(IDBTransaction.prototype, 'promise', {get: function() {
   var tx = this;
   return new Promise(function(resolve, reject) {
     if (tx.state === "finished") {
@@ -68,52 +65,34 @@ IDBTransaction.prototype.promise = function() {
       tx.addEventListener('abort', function() { reject(tx.error); });
     }
   });
-};
-
-IDBTransaction.prototype.then = function(onFulfilled, onRejected) {
-  return this.promise().then(onFulfilled, onRejected);
-};
-
-IDBTransaction.prototype.catch = function(onRejected) {
-  return this.promise().catch(onRejected);
-};
+}, enumerable: true, configurable: true});
 ```
 
 ### Requests ###
 
 ```
 partial interface IDBRequest {
-  Promise<any> promise();
-  Promise<any> then(SuccessCallback onFulfilled, optional ErrorCallback onRejected);
-  Promise<any> catch(ErrorCallback onRejected);
+  readonly attribute Promise<any> promise;
 };
 ```
 
-The `promise()`, `then()` and `catch()` methods are conveniences to allow IDBRequest objects to be used in Promise chains. They are equivalent to:
+The `promise` attribute is a convenience to allow IDBRequest objects to be used in Promise chains. It is equivalent to:
 
 ```js
-IDBRequest.prototype.promise = function() {
-  var request = this;
+Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {
+  var rq = this;
   return new Promise(function(resolve, reject) {
-    if (request.readyState === "done") {
-      if (request.error)
+    if (rq.readyState === "done") {
+      if (rq.error)
         reject(request.error);
       else
         resolve(request.result);
     } else {
-      request.addEventListener('success', function() { resolve(request.result); });
-      request.addEventListener('error', function() { reject(request.error); });
+      rq.addEventListener('success', function() { resolve(rq.result); });
+      rq.addEventListener('error', function() { reject(rq.error); });
     }
   });
-};
-
-IDBRequest.prototype.then = function(onFulfilled, onRejected) {
-  return this.promise().then(onFulfilled, onRejected);
-};
-
-IDBRequest.prototype.catch = function(onRejected) {
-  return this.promise().catch(onRejected);
-};
+}, enumerable: true, configurable: true});
 ```
 
 Note that they do not implicitly cause the transaction to wait until the returned promise is resolved, as that would not help in the following scenario:
@@ -122,7 +101,7 @@ Note that they do not implicitly cause the transaction to wait until the returne
 // THIS WILL NOT WORK
 var tx = db.transaction('store', 'readwrite');
 var store = tx.objectStore('store');
-store.get('key')
+store.get('key').promise
   .then(function(value) {
     return store.put(value + 1, 'key2');
   });
@@ -134,7 +113,7 @@ At the point where the `get()` request completes the associated transaction woul
 var tx = db.transaction('store', 'readwrite');
 var store = tx.objectStore('store');
 tx.waitUntil(
-  store.get('key')
+  store.get('key').promise
     .then(function(value) {
       return store.put(value + 1, 'key2');
     })

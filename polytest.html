@@ -23,7 +23,7 @@ r.onsuccess = function() {
   var s = tx.objectStore('squares');
   console.log('state >> ' + tx.state);
   tx.waitUntil(
-    s.get(3)
+    s.get(3).promise
      .then(function(result) {
        console.log('state >> ' + tx.state);
        console.log(' >> ' + result);
@@ -31,7 +31,7 @@ r.onsuccess = function() {
      })
      .then(function() {
        console.log('state >> ' + tx.state);
-       return s.get(5)
+       return s.get(5).promise;
      })
      .then(function(result) {
        console.log('state >> ' + tx.state);
@@ -40,7 +40,7 @@ r.onsuccess = function() {
      })
   );
 
-  tx.then(function() {
+  tx.promise.then(function() {
     console.log('tx then, state >> ' + tx.state);
   }, function() {
     console.log('tx caught, state >> ' + tx.state);

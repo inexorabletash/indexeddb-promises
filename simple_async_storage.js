@@ -8,18 +8,18 @@ SimpleStorage.prototype = {
   _open: function() {
     var r = indexedDB.open(this.name);
     r.upgradeneeded = function(e) { e.target.result.createObjectStore('store'); };
-    return r.promise();
+    return r.promise;
   },
 
   get: function(key) {
     return this._open().then(function(db) {
-      return db.tx('store').objectStore('store').get(key);
+      return db.tx('store').objectStore('store').get(key).promise;
     });
   },
 
   set: function(key, value) {
     return this._open().then(function(db) {
-      return db.tx('store', 'readwrite').objectStore('store').put(value, key);
+      return db.tx('store', 'readwrite').objectStore('store').put(value, key).promise;
     });
   }
 };
