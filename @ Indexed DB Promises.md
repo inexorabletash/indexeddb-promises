@@ -1,4 +1,4 @@
-s## Indexed DB + Promises #3 ##
+## Indexed DB + Promises #3 ##
 
 Further thinking about what a Promise-friendly version of IDB could look like. 
 
