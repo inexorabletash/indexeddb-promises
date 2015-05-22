@@ -22,7 +22,7 @@ Here's a possible incremental evolution of the IDB API to interoperate with prom
 
 ```
 callback SuccessCallback = void (any result);
-callback ErrorCallback = void (DOMError error);
+callback ErrorCallback = void (DOMException error);
 
 enum IDBTransactionState {  "active", "inactive", "waiting", "committing", "finished" };
 
