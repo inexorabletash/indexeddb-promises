@@ -61,7 +61,7 @@
     var tx = $IDBDatabase_prototype_transaction.apply(this, arguments);
 
     if (!Array.isArray(scope))
-      scope = [String(scope)];
+      scope = [String(scope)]; // TODO: sort, unique
     else
       scope = String(scope);
 
@@ -120,9 +120,9 @@
         }
       },
 
-      scope: {
+      objectStoreNames: {
         get: function() {
-          return this._scope;
+          return this.mode === 'versionchange' ? db.objectStoreNames : this._scope;
         }
       },
 

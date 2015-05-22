@@ -1,4 +1,4 @@
-## Indexed DB + Promises #3 ##
+s## Indexed DB + Promises #3 ##
 
 Further thinking about what a Promise-friendly version of IDB could look like. 
 
@@ -28,7 +28,7 @@ enum IDBTransactionState {  "active", "inactive", "waiting", "committing", "fini
 
 partial interface IDBTransaction {
   readonly attribute IDBTransactionState state;
-  readonly attribute DOMString[] scope;
+  readonly attribute DOMString[] objectStoreNames; // implemented in FF
 
   Promise<any> waitUntil(Promise<any> p);
 
@@ -50,7 +50,7 @@ If a transaction is already waiting on Promise `p` and `waitUntil(q)` is called,
 
 The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope, but it was not exposed as an attribute.*
 
-The `scope` attribute reflects the list of object stores in the transaction's *scope*, in the same order as specified during transaction creation. The list is empty for "versionchange" transactions. *NB: This is provided as a convenience; previously it was necessary for code to track this manually.*
+The `objectStoreNames` attribute reflects the list of names of object stores in the transaction's *scope*, in sorted order. For "versionchange" transactions this is the same as that returned by the `IDBDatabase`'s `objectStoreNames` attribute. *NB: This is provided as a convenience; previously it was necessary for code to track this manually. Firefox already implements this.*
 
 The `promise()`, `then()` and `catch()` methods are conveniences to allow IDBTransaction objects to be used in Promise chains. They are equivalent to:
 
