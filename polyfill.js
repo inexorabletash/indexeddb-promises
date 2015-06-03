@@ -93,8 +93,7 @@
   };
 
   function getStore(tx) {
-    var scope = tx.mode === 'versionchange'
-          ? tx.db.objectStoreNames : tx._scope;
+    var scope = tx.objectStoreNames;
     if (scope.length)
       return tx.objectStore(scope[0]);
 
@@ -122,7 +121,10 @@
 
       objectStoreNames: {
         get: function() {
-          return this.mode === 'versionchange' ? db.objectStoreNames : this._scope;
+          if (this.mode === 'versionchange')
+            return this.db.objectStoreNames;
+          else
+            return this._scope;
         }
       },
 

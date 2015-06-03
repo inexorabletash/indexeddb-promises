@@ -19,23 +19,24 @@ r.onupgradeneeded = function() {
 
 r.onsuccess = function() {
   var db = r.result;
+  console.log('-- creating tx --');
   var tx = db.transaction('squares');
   var s = tx.objectStore('squares');
   console.log('state >> ' + tx.state);
   tx.waitUntil(
-    s.get(3).promise
+    rq = s.get(3).promise
      .then(function(result) {
-       console.log('state >> ' + tx.state);
-       console.log(' >> ' + result);
+       console.log('tx state >> ' + tx.state);
+       console.log('result >> ' + result);
        return sleep(10);
      })
      .then(function() {
-       console.log('state >> ' + tx.state);
+       console.log('tx state >> ' + tx.state);
        return s.get(5).promise;
      })
      .then(function(result) {
-       console.log('state >> ' + tx.state);
-       console.log(' >> ' + result);
+       console.log('tx state >> ' + tx.state);
+       console.log('result >> ' + result);
        return sleep(10);
      })
   );
@@ -44,6 +45,27 @@ r.onsuccess = function() {
     console.log('tx then, state >> ' + tx.state);
   }, function() {
     console.log('tx caught, state >> ' + tx.state);
+  });
+
+  sleep(100).then(function() {
+    console.log('-- creating tx2 --');
+    var tx2 = db.transaction('squares');
+    var store = tx2.objectStore('squares');
+    console.log('tx2 state >> ' + tx2.state);
+    var spin = true;
+    (function wait() {
+      if (spin)
+        store.get(0).onsuccess = wait;
+      else
+        console.log('tx2 state >> ' + tx2.state);
+    }());
+    setTimeout(function() {
+      console.log('tx2 state >> ' + tx2.state);
+      spin = false;
+    }, 0);
+    tx2.oncomplete = function() {
+      console.log('tx2 state >> ' + tx2.state);
+    };
   });
 };
 
