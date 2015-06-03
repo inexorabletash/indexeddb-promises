@@ -31,6 +31,7 @@ r.onsuccess = function() {
     console.assert(rq.promise === rq.promise);
   }());
 
+  var rq2, p2;
   tx.waitUntil(
     rq = s.get(3).promise
      .then(function(result) {
@@ -40,9 +41,12 @@ r.onsuccess = function() {
      })
      .then(function() {
        console.log('tx state >> ' + tx.state);
-       return s.get(5).promise;
+       rq2 = s.get(5);
+       p2 = rq2.promise;
+       return p2;
      })
      .then(function(result) {
+       console.assert(p2 === rq2.promise);
        console.log('tx state >> ' + tx.state);
        console.log('result >> ' + result);
        return sleep(10);

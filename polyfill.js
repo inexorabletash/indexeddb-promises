@@ -263,8 +263,8 @@
 
     get promise() {
       if (this._request)
-        return this._request.promise.apply(this._request, arguments);
-      return Promise.resolve(this._promise);
+        return this._request.promise;
+      return this._promise;
     },
 
     // Called when the real IDBRequest is ready.
