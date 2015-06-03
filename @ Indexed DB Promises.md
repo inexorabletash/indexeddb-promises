@@ -49,7 +49,7 @@ The transaction's *active* flag is replaced by a *state* which can be one of: "a
   "committing"  and the transaction attempts to commit.
 * When the transaction successfully commits or aborts, *state* is set to "finished".
 
- *NB: The above matches the behavior of IDB "v1".*
+*NB: The above matches the behavior of IDB "v1".*
 
 If `waitUntil(p)` is called and *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned. Otherwise, *state* is set to "waiting". The transaction now waits on the Promise `p`; if `p` rejects, the transaction aborts. If `p` fulfills, the *state* is set to "committing" and the transaction attempts to commit. An explicit `abort()` call still also aborts the transaction immediately, and the promise resolution is ignored.
 
