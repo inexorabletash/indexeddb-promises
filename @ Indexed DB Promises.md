@@ -71,7 +71,7 @@ The `promise` attribute is a convenience to allow IDBTransaction objects to be u
 Object.defineProperty(IDBTransaction.prototype, 'promise', {get: function() {
   var tx = this;
   return new Promise(function(resolve, reject) {
-    if (tx.state === "finished") {
+    if (tx.state === 'finished') {
       if (tx.error)
         reject(tx.error);
       else
@@ -98,7 +98,7 @@ The `promise` attribute is a convenience to allow IDBRequest objects to be used 
 Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {
   var rq = this;
   return new Promise(function(resolve, reject) {
-    if (rq.readyState === "done") {
+    if (rq.readyState === 'done') {
       if (rq.error)
         reject(request.error);
       else
