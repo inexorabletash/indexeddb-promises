@@ -59,7 +59,7 @@ The transaction's *active* flag is replaced by a *state* which can be one of: "a
 
 If a transaction is already waiting on Promise `p` and `waitUntil(q)` is called, then the transaction should instead wait on a new Promise equivalent to `p.then(() => q)`.
 
-> TODO: Return value of waitUntil()? Options include (1) a Promise dependent on the promise the transaction is waiting on (2) just whatever is passed in (3) `undefined`?*
+> ISSUE: Return value of waitUntil()? Options include (1) a Promise dependent on the promise the transaction is waiting on (2) just whatever is passed in (3) `undefined`?*
 
 The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope, but it was not exposed as an attribute.*
 
@@ -83,6 +83,9 @@ Object.defineProperty(IDBTransaction.prototype, 'promise', {get: function() {
   });
 }, enumerable: true, configurable: true});
 ```
+
+
+> ISSUE: Add a timeout to transactions. Maybe make this mandatory if waitUntil() is used?
 
 ### Requests ###
 
@@ -158,5 +161,3 @@ The above is the *minimum* surface area we can expose for cursors. Adding async 
 * With the `waitUntil()` mechanism it is possible to create transactions that will never complete, e.g. `waitUntil(new Promise())`. This introduces the possibility of deadlocks. But this is possible today with "busy waiting" transactions - in fact, locking primitives like Mutexes can already be created using IDB. See https://gist.github.com/inexorabletash/fbb4735a2e6e8c115a7e
 
 * Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks.
-
-> TODO: Add a timeout to transactions. Maybe make this mandatory if waitUntil() is used?
