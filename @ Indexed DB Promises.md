@@ -1,6 +1,6 @@
 ## Indexed DB + Promises #3 ##
 
-Further thinking about what a Promise-friendly version of IDB could look like. 
+Further thinking about what a Promise-friendly version of IDB could look like.
 
 > STATUS: Serious proposal, but may want to solve pan-storage transactions first. Actively soliciting feedback.
 
@@ -37,7 +37,17 @@ partial interface IDBTransaction {
 
 Transactions grow a `waitUntil()` method similar to [ExtendableEvent](https://slightlyoff.github.io/ServiceWorker/spec/service_worker/index.html#extendable-event).
 
-The transaction's *active* flag is replaced by a *state* which can be one of: "active", "inactive", "waiting", "committing", and "finished". When a transaction is created the *state* is active. If *state* is "active" at the end of a task then *state* is set to "inactive". If *state* becomes "inactive" and there are no pending requests, *state* is set to "committing" and the transaction attempts to commit. If the transaction successfully commits or aborts, *state* is set to "finished". *NB: This matches the behavior of IDB "v1".*
+The transaction's *active* flag is replaced by a *state* which can be one of: "active", "inactive", "waiting", "committing", and "finished".
+
+* When a transaction is created by `transaction()` the *state* is "active". When control
+  returns to the event loop, it is set to "inactive"
+* When a "success" or "error" event is to be dispatched at an `IDBRequest` associated with the
+  transaction, *state* is set to "active" before dispatch and set to "inactive" after
+  dispatch.
+* If *state* is "active" at the end of a task then *state* is set to "inactive".
+* When *state* becomes "inactive", if there are no pending requests, *state* is set to "committing" and the transaction attempts to commit.
+* When the transaction successfully commits or aborts, *state* is set to "finished".
+ *NB: The above matches the behavior of IDB "v1".*
 
 If `waitUntil(p)` is called and *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned. Otherwise, *state* is set to "waiting". The transaction now waits on the Promise `p`; if `p` rejects, the transaction aborts. If `p` fulfills, the *state* is set to "committing" and the transaction attempts to commit. An explicit `abort()` call still also aborts the transaction immediately, and the promise resolution is ignored.
 
@@ -49,7 +59,7 @@ The `state` attribute reflects the internal *state* of the transaction. *NB: Pre
 
 The `objectStoreNames` attribute reflects the list of names of object stores in the transaction's *scope*, in sorted order. For "versionchange" transactions this is the same as that returned by the `IDBDatabase`'s `objectStoreNames` attribute. *NB: This is provided as a convenience; previously it was necessary for code to track this manually. Firefox already implements this.*
 
-The `promise` attribute is a convenience to allow IDBTransaction objects to be used in Promise chains. It is equivalent to:
+The `promise` attribute is a convenience to allow IDBTransaction objects to be used in Promise chains. It is roughly equivalent to:
 
 ```js
 Object.defineProperty(IDBTransaction.prototype, 'promise', {get: function() {
@@ -76,7 +86,7 @@ partial interface IDBRequest {
 };
 ```
 
-The `promise` attribute is a convenience to allow IDBRequest objects to be used in Promise chains. It is equivalent to:
+The `promise` attribute is a convenience to allow IDBRequest objects to be used in Promise chains. It is roughly equivalent to:
 
 ```js
 Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {

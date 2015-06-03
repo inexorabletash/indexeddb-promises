@@ -67,6 +67,7 @@
 
     // If waitUntil() is not used:
     //   state will be 'maybeActive' -> 'finished'
+    //   (should include 'committing' but can't polyfill that)
     // Once waitUntil() is called:
     //   state will be 'waiting' -> 'committing' -> 'finished'
     tx._state = 'maybeActive';
@@ -188,7 +189,7 @@
 
       promise: {
         get: function() {
-          return Promise.resolve(this._promise);
+          return this._promise;
         }, enumerable: true, configurable: true
       }
     });
@@ -413,7 +414,7 @@
       promise: {
         get: function() {
           if (!this._promise) throw Error('unhooked request');
-          return Promise.resolve(this._promise);
+          return this._promise;
         }, enumerable: true, configurable: true
       }
     });
