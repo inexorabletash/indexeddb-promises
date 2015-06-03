@@ -45,7 +45,8 @@ The transaction's *active* flag is replaced by a *state* which can be one of: "a
   transaction, *state* is set to "active" before dispatch and set to "inactive" after
   dispatch.
 * If *state* is "active" at the end of a task then *state* is set to "inactive".
-* When *state* becomes "inactive", if there are no pending requests, *state* is set to "committing"  and the transaction attempts to commit.
+* When *state* becomes "inactive", if there are no pending requests, *state* is set to
+  "committing"  and the transaction attempts to commit.
 * When the transaction successfully commits or aborts, *state* is set to "finished".
 
  *NB: The above matches the behavior of IDB "v1".*
