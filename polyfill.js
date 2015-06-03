@@ -303,38 +303,19 @@
   // Hook existing methods that return one-shot IDBRequests to enqueue
   // a job and return a proxy if the transaction is waiting.
   [
-    [IDBObjectStore, ['put', 'add', 'delete', 'get', 'clear', 'count']],
-    [IDBIndex, ['get', 'getKey', 'count']],
-    [IDBCursor, ['update', 'delete']]
+    [IDBObjectStore,
+     ['put', 'add', 'delete', 'clear', 'get', 'getAll', 'getAllKeys', 'count']],
+    [IDBIndex,
+     ['get', 'getKey', 'getAll', 'getAllKeys', 'count']],
+    [IDBCursor,
+     ['update', 'delete']]
   ].forEach(function(typeAndMethods) {
     var type = typeAndMethods[0], methods = typeAndMethods[1];
     methods.forEach(function(methodName) {
-      var method = type.prototype[methodName];
-      if (!method) return;
-      type.prototype[methodName] = function() {
-        var $this = this, $arguments = arguments;
-        var tx = transactionFor(this);
-
-        var request;
-        if (tx.state !== 'waiting') {
-          request = method.apply(this, arguments);
-        } else {
-          var proxy = new IDBRequestProxy();
-          tx._queue.push(function() {
-            // TODO: Handle exceptions due to bad arguments
-            // (in a real implementation those would be synchronous)
-            var r = method.apply($this, $arguments);
-            proxy._provide(r);
-          });
-          request = proxy;
-        }
-
-        request._promise = promiseForRequest(request);
-
-        return request;
-      };
+      hook(type, methodName);
     });
   });
+
 
   // Hook existing methods that return IDBRequests that yield
   // IDBCursors, to associate the request with the cursor, and also
@@ -345,36 +326,43 @@
   ].forEach(function(typeAndMethods) {
     var type = typeAndMethods[0], methods = typeAndMethods[1];
     methods.forEach(function(methodName) {
-      var method = type.prototype[methodName];
-      if (!method) return;
-      type.prototype[methodName] = function() {
-        var $this = this, $arguments = arguments;
-        var tx = transactionFor(this);
+      hook(type, methodName, true);
+    });
+  });
 
-        var request;
-        if (tx.state !== 'waiting') {
-          request = method.apply(this, arguments);
-        } else {
-          var proxy = new IDBRequestProxy();
-          tx._queue.push(function() {
-            // TODO: Handle exceptions due to bad arguments
-            // (in a real implementation those would be synchronous)
-            var r = method.apply($this, $arguments);
-            proxy._provide(r);
-          });
-          request = proxy;
-        }
+  function hook(type, methodName, hookCursor) {
+    var method = type.prototype[methodName];
+    if (!method) return;
+    type.prototype[methodName] = function() {
+      var $this = this, $arguments = arguments;
+      var tx = transactionFor(this);
 
-        request._promise = promiseForRequest(request);
+      var request;
+      if (tx.state !== 'waiting') {
+        request = method.apply(this, arguments);
+      } else {
+        var proxy = new IDBRequestProxy();
+        tx._queue.push(function() {
+          // TODO: Handle exceptions due to bad arguments
+          // (in a real implementation those would be synchronous)
+          var r = method.apply($this, $arguments);
+          proxy._provide(r);
+        });
+        request = proxy;
+      }
+
+      request._promise = promiseForRequest(request);
+
+      if (hookCursor) {
         request._promise.then(function(cursor) {
           if (!cursor) return;
           cursor._request = request;
         });
+      }
 
-        return request;
-      };
-    });
-  });
+      return request;
+    };
+  }
 
   [
     [IDBCursor, ['continue', 'advance']]

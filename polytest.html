@@ -23,6 +23,14 @@ r.onsuccess = function() {
   var tx = db.transaction('squares');
   var s = tx.objectStore('squares');
   console.log('state >> ' + tx.state);
+
+  (function() {
+    console.assert(tx.promise === tx.promise);
+
+    var rq = s.get(0);
+    console.assert(rq.promise === rq.promise);
+  }());
+
   tx.waitUntil(
     rq = s.get(3).promise
      .then(function(result) {
