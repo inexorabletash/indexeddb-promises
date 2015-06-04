@@ -23,7 +23,7 @@ Here's a possible incremental evolution of the IDB API to interoperate with prom
 
 ### Transactions ###
 
-```
+```webidl
 callback SuccessCallback = void (any result);
 callback ErrorCallback = void (DOMException error);
 
@@ -92,7 +92,7 @@ Object.defineProperty(IDBTransaction.prototype, 'promise', {get: function() {
 
 ### Requests ###
 
-```
+```webidl
 partial interface IDBRequest {
   readonly attribute Promise<any> promise;
 };
