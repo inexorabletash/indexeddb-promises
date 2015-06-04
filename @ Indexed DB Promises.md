@@ -16,7 +16,10 @@ Indexed DB transactions compose poorly with Promises.
 
 [Transactions](https://dvcs.w3.org/hg/IndexedDB/raw-file/tip/Overview.html#transaction-concept) are defined as having an *active* flag that is set when the transaction is created, and when an IDB event callback from a source associated with that transaction is run. The *active* flag is cleared when the task completes i.e. when control returns from script; for example, at the end of the callback. Operations within a transaction (put, get, etc) are only permitted when the flag is true. This implies that you cannot perform operations within a Promise callback, since it is by definition not an IDB event callback. Further, transactions automatically attempt to commit when the flag is cleared and there are no pending requests. This implies that even if the previous restriction was lifted, the transaction would commit before any Promise callback fired. If the *active* flag mechanism were to be removed entirely, a new commit model would need to be introduced.
 
-Here's a possible incremental evolution of the IDB API to interoperate with promises.
+Here's a possible incremental evolution of the IDB API to interoperate with promises. It can be summarized as two separate but complementary additions to the API:
+
+* Improve integration with other Promise-based code by adding `.promise` affordances to `IDBTransaction` and `IDBRequest`
+* Extend the transaction lifecycle model by allowing a transaction to _wait_ on a Promise
 
 ### Transactions ###
 
