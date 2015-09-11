@@ -177,7 +177,9 @@ async function incrementSlowlyBROKEN(store, key) {
   let value = await tx.objectStore(store).get(key);
   // in follow-on microtask...
   await sleep(500);
-  // control returned to the event loop c/o setTimeout, so poop:
+  // but here, control returns to the event loop, so
+  // the transaction will auto-commit and this
+  // next call will fail:
   await tx.objectStore(store).put(value + 1);  
   await tx.complete;
 }
