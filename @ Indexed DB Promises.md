@@ -35,6 +35,45 @@ partial interface IDBTransaction {
 };
 ```
 
+The `promise` attribute is a convenience to allow IDBTransaction objects to be used in Promise chains. It is roughly equivalent to:
+
+```js
+Object.defineProperty(IDBTransaction.prototype, 'promise', {get: function() {
+  var tx = this;
+  return new Promise(function(resolve, reject) {
+    if (tx.state === 'finished') {
+      if (tx.error)
+        reject(tx.error);
+      else
+        resolve();
+    } else {
+      tx.addEventListener('complete', function() { resolve(); });
+      tx.addEventListener('abort', function() { reject(tx.error); });
+    }
+  });
+}, enumerable: true, configurable: true});
+```
+Example:
+```js
+var tx = db.transaction('my_store', 'readwrite');
+// ...
+tx.promise
+  .then(function() { console.log('committed'); })
+  .catch(function(ex) { console.log('aborted: ' + ex.message); });
+```
+
+Example (with proposed syntax extensions, assuming async context):
+```js
+let tx = db.transaction('my_store', 'readwrite');
+// ...
+try {
+  await tx;
+  console.log('committed');
+} catch (ex) {
+  console.log('aborted: ' + ex.message);
+}
+```
+
 Transactions grow a `waitUntil()` method similar to [ExtendableEvent](https://slightlyoff.github.io/ServiceWorker/spec/service_worker/index.html#extendable-event).
 
 The transaction's *active* flag is replaced by a *state* which can be one of: "active", "inactive", "waiting", "committing", and "finished".
@@ -65,25 +104,6 @@ The `state` attribute reflects the internal *state* of the transaction. *NB: Pre
 
 The `objectStoreNames` attribute reflects the list of names of object stores in the transaction's *scope*, in sorted order. For "versionchange" transactions this is the same as that returned by the `IDBDatabase`'s `objectStoreNames` attribute. *NB: This is provided as a convenience; previously it was necessary for code to track this manually. Firefox already implements this, and it was added to the [V2 draft](https://w3c.github.io/IndexedDB/)*
 
-The `promise` attribute is a convenience to allow IDBTransaction objects to be used in Promise chains. It is roughly equivalent to:
-
-```js
-Object.defineProperty(IDBTransaction.prototype, 'promise', {get: function() {
-  var tx = this;
-  return new Promise(function(resolve, reject) {
-    if (tx.state === 'finished') {
-      if (tx.error)
-        reject(tx.error);
-      else
-        resolve();
-    } else {
-      tx.addEventListener('complete', function() { resolve(); });
-      tx.addEventListener('abort', function() { reject(tx.error); });
-    }
-  });
-}, enumerable: true, configurable: true});
-```
-
 
 > ISSUE: Add a timeout to transactions. Maybe make this mandatory if waitUntil() is used?
 
@@ -112,6 +132,20 @@ Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {
     }
   });
 }, enumerable: true, configurable: true});
+```
+
+Example:
+```js
+var tx = db.transaction('my_store');
+tx.objectStore('my_store').get(key).promise
+  .then(function(result) { console.log('got: ' + result); });
+```
+
+Example (with proposed syntax extensions, assuming async context):
+```js
+let tx = db.transaction('my_store');
+let result = await tx.objectStore('my_store').get(key).promise;
+console.log('got: ' + result);
 ```
 
 Note that they do not implicitly cause the transaction to wait until the returned promise is resolved, as that would not help in the following scenario:
