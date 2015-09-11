@@ -151,26 +151,67 @@ console.log('got: ' + result);
 Note that they do not implicitly cause the transaction to wait until the returned promise is resolved, as that would not help in the following scenario:
 
 ```js
-// THIS WILL NOT WORK
-var tx = db.transaction('store', 'readwrite');
-var store = tx.objectStore('store');
-store.get('key').promise
-  .then(function(value) {
-    return store.put(value + 1, 'key2');
+function sleep(ms) {
+  return new Promise(function(resolve) {
+    setTimeout(resolve, ms);
   });
-```
+}
 
+function incrementSlowlyBROKEN(key) {
+  var tx = db.transaction('store', 'readwrite');
+  var store = tx.objectStore('store');
+  var old;
+  store.get(key).promise
+    .then(function(value) {
+      old = value;
+      return sleep(500); // Returns control to event loop.
+    })
+    .then(function() {
+      return store.put(old + 1, key);
+    });
+}
+```
+ES7 version:
+```js
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function incrementSlowlyBROKEN(key) {
+  var tx = db.transaction('store', 'readwrite');
+  var store = tx.objectStore('store');
+  let value = await store.get(key).promise;
+  await sleep(500); // Returns control to event loop.
+  await store.put(value + 1, key);
+}
+```
 At the point where the `get()` request completes the associated transaction would commit as there is no further work. Instead, this structure must be used:
 
 ```js
-var tx = db.transaction('store', 'readwrite');
-var store = tx.objectStore('store');
-tx.waitUntil(
-  store.get('key').promise
+function incrementSlowly(key) {
+  var tx = db.transaction('store', 'readwrite');
+  var store = tx.objectStore('store');
+  var old;
+  tx.waitUntil(store.get(key).promise
     .then(function(value) {
-      return store.put(value + 1, 'key2');
+      old = value;
+      return sleep(500); // Returns control to event loop.
     })
-);
+    .then(function() {
+      return store.put(old + 1, key);
+    }));
+```
+
+ES7 Version:
+```js
+function incrementSlowly(key) {
+  var tx = db.transaction('store', 'readwrite');
+  var store = tx.objectStore('store');
+  tx.waitUntil((async function() {
+    let value = await store.get(key).promise;
+    await sleep(500); // Returns control to event loop.
+    await store.put(value + 1, key);
+  }());
 ```
 
 ### Cursors ###
@@ -188,7 +229,19 @@ partial interface IDBCursor {
 
 The cursor iteration methods (`continue()` and `advance()`) now return `Promise<IDBCursor?>`. *NB: Previously they were void methods, so this is backwards-compatible.* The promise resolves with `null` if the iteration is complete, otherwise it is resolved with the same cursor object with the `key`, `primaryKey`, and `value` attributes will be updated as appropriate, just as with event-based iteration.
 
-The above is the *minimum* surface area we can expose for cursors. Adding async iterator support would be a huge benefit for developers, e.g. `store.openCursor(range).forEach(function(callback) { ... });`
+Here's how you'd fetch all keys in a range using a cursor, using ES7 syntax:
+
+```js
+async function getAll(store, query) {
+  let result = [];
+  let cursor = await store.openCursor(query);
+  while (cursor) {
+    result.push(cursor.value);
+    cursor = await cursor.continue();
+  }
+  return result;
+}
+```
 
 ### Concerns ###
 
