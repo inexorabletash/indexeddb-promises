@@ -63,7 +63,7 @@ If a transaction is already waiting on Promise `p` and `waitUntil(q)` is called,
 
 The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope, but it was not exposed as an attribute.*
 
-The `objectStoreNames` attribute reflects the list of names of object stores in the transaction's *scope*, in sorted order. For "versionchange" transactions this is the same as that returned by the `IDBDatabase`'s `objectStoreNames` attribute. *NB: This is provided as a convenience; previously it was necessary for code to track this manually. Firefox already implements this.*
+The `objectStoreNames` attribute reflects the list of names of object stores in the transaction's *scope*, in sorted order. For "versionchange" transactions this is the same as that returned by the `IDBDatabase`'s `objectStoreNames` attribute. *NB: This is provided as a convenience; previously it was necessary for code to track this manually. Firefox already implements this, and it was added to the [V2 draft](https://w3c.github.io/IndexedDB/)*
 
 The `promise` attribute is a convenience to allow IDBTransaction objects to be used in Promise chains. It is roughly equivalent to:
 
