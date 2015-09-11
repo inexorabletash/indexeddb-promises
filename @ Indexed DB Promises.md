@@ -24,9 +24,6 @@ Here's a possible incremental evolution of the IDB API to interoperate with prom
 ### Transactions ###
 
 ```webidl
-callback SuccessCallback = void (any result);
-callback ErrorCallback = void (DOMException error);
-
 enum IDBTransactionState {  "active", "inactive", "waiting", "committing", "finished" };
 
 partial interface IDBTransaction {
