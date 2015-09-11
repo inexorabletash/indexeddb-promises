@@ -62,7 +62,7 @@ tx.promise
   .catch(function(ex) { console.log('aborted: ' + ex.message); });
 ```
 
-Example (with proposed syntax extensions, assuming async context):
+Example (with proposed ES7 syntax extensions, assuming async context):
 ```js
 let tx = db.transaction('my_store', 'readwrite');
 // ...
@@ -141,77 +141,59 @@ tx.objectStore('my_store').get(key).promise
   .then(function(result) { console.log('got: ' + result); });
 ```
 
-Example (with proposed syntax extensions, assuming async context):
+ES7:
 ```js
 let tx = db.transaction('my_store');
 let result = await tx.objectStore('my_store').get(key).promise;
 console.log('got: ' + result);
 ```
 
-Note that they do not implicitly cause the transaction to wait until the returned promise is resolved, as that would not help in the following scenario:
+Multiple database operations can be chained as long as control does not return to the event loop. For example:
 
+ES7:
 ```js
-function sleep(ms) {
-  return new Promise(function(resolve) {
-    setTimeout(resolve, ms);
-  });
-}
-
-function incrementSlowlyBROKEN(key) {
-  var tx = db.transaction('store', 'readwrite');
-  var store = tx.objectStore('store');
-  var old;
-  store.get(key).promise
-    .then(function(value) {
-      old = value;
-      return sleep(500); // Returns control to event loop.
-    })
-    .then(function() {
-      return store.put(old + 1, key);
-    });
+async function increment(store, key) {
+  let tx = db.transaction(store, 'readwrite');
+  let value = await tx.objectStore(store).get(key);
+  // in follow-on microtask, but control hasn't returned to event loop
+  await tx.objectStore(store).put(value + 1);
+  await tx.complete; // Ensure it commits
 }
 ```
-ES7 version:
+
+Note that they do not implicitly cause the transaction to wait until the returned promise is resolved, as that would not help in the following scenario. Assume this helper:
+
 ```js
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+```
 
-async function incrementSlowlyBROKEN(key) {
-  var tx = db.transaction('store', 'readwrite');
-  var store = tx.objectStore('store');
-  let value = await store.get(key).promise;
-  await sleep(500); // Returns control to event loop.
-  await store.put(value + 1, key);
+This would fail:
+
+```js
+async function incrementSlowlyBROKEN(store, key) {
+  let tx = db.transaction(store, 'readwrite');
+  let value = await tx.objectStore(store).get(key);
+  // in follow-on microtask...
+  await sleep(500);
+  // control returned to the event loop c/o setTimeout, so poop:
+  await tx.objectStore(store).put(value + 1);  
+  await tx.complete;
 }
 ```
-At the point where the `get()` request completes the associated transaction would commit as there is no further work. Instead, this structure must be used:
+At the point where the `sleep()` call is made the the associated transaction would commit as there is no further work. Instead, this structure must be used:
 
 ```js
-function incrementSlowly(key) {
-  var tx = db.transaction('store', 'readwrite');
-  var store = tx.objectStore('store');
-  var old;
-  tx.waitUntil(store.get(key).promise
-    .then(function(value) {
-      old = value;
-      return sleep(500); // Returns control to event loop.
-    })
-    .then(function() {
-      return store.put(old + 1, key);
-    }));
-```
-
-ES7 Version:
-```js
-function incrementSlowly(key) {
-  var tx = db.transaction('store', 'readwrite');
-  var store = tx.objectStore('store');
+async function incrementSlowly(store, key) {
+  let tx = db.transaction(store, 'readwrite');
   tx.waitUntil((async function() {
-    let value = await store.get(key).promise;
-    await sleep(500); // Returns control to event loop.
-    await store.put(value + 1, key);
-  }());
+    let value = await tx.objectStore(store).get(key);
+    await sleep(500);
+    await tx.objectStore(store).put(value + 1);  
+  }()));
+  await tx.complete;
+}
 ```
 
 ### Cursors ###
@@ -229,7 +211,7 @@ partial interface IDBCursor {
 
 The cursor iteration methods (`continue()` and `advance()`) now return `Promise<IDBCursor?>`. *NB: Previously they were void methods, so this is backwards-compatible.* The promise resolves with `null` if the iteration is complete, otherwise it is resolved with the same cursor object with the `key`, `primaryKey`, and `value` attributes will be updated as appropriate, just as with event-based iteration.
 
-Here's how you'd fetch all keys in a range using a cursor, using ES7 syntax:
+Here's how you'd fetch all keys in a range using a cursor:
 
 ```js
 async function getAll(store, query) {
@@ -247,4 +229,4 @@ async function getAll(store, query) {
 
 * With the `waitUntil()` mechanism it is possible to create transactions that will never complete, e.g. `waitUntil(new Promise())`. This introduces the possibility of deadlocks. But this is possible today with "busy waiting" transactions - in fact, locking primitives like Mutexes can already be created using IDB. See https://gist.github.com/inexorabletash/fbb4735a2e6e8c115a7e
 
-* Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks.
+* Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks. Fortunately, with ES7 async/await syntax, asynchronous errors can also be handled by try/catch blocks.
