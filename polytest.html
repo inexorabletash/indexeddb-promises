@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <script src="polyfill.js"></script>
 <script>
+'use strict';
 
 function sleep(ms) {
   return new Promise(function(resolve) {
@@ -31,7 +32,7 @@ r.onsuccess = function() {
     console.assert(rq.promise === rq.promise);
   }());
 
-  var rq2, p2;
+  var rq, rq2, p2;
   tx.waitUntil(
     rq = s.get(3).promise
      .then(function(result) {
