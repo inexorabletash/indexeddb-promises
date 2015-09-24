@@ -192,9 +192,9 @@ At the point where the `sleep()` call is made the the associated transaction wou
 async function incrementSlowly(store, key) {
   let tx = db.transaction(store, 'readwrite');
   tx.waitUntil((async function() {
-    let value = await tx.objectStore(store).get(key);
+    let value = await tx.objectStore(store).get(key).promise;
     await sleep(500);
-    await tx.objectStore(store).put(value + 1);  
+    await tx.objectStore(store).put(value + 1).promise;  
   }()));
   await tx.complete;
 }
