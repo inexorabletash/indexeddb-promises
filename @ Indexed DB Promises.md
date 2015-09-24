@@ -67,7 +67,7 @@ Example (with proposed ES7 syntax extensions, assuming async context):
 let tx = db.transaction('my_store', 'readwrite');
 // ...
 try {
-  await tx;
+  await tx.promise;
   console.log('committed');
 } catch (ex) {
   console.log('aborted: ' + ex.message);
