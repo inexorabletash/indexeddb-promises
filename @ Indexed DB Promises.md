@@ -18,7 +18,7 @@ Indexed DB transactions compose poorly with Promises.
 
 Here's a possible incremental evolution of the IDB API to interoperate with promises. It can be summarized as two separate but complementary additions to the API:
 
-* Improve integration with other Promise-based code by adding `.promise` affordances to `IDBTransaction` and `IDBRequest`
+* Improve integration with other Promise-based code by adding a `.promise` affordance to `IDBRequest` and a similar `.complete` affordance to `IDBTransaction`
 * Extend the transaction lifecycle model by allowing a transaction to _wait_ on a Promise
 
 ### Transactions ###
@@ -29,16 +29,16 @@ enum IDBTransactionState {  "active", "inactive", "waiting", "committing", "fini
 partial interface IDBTransaction {
   readonly attribute IDBTransactionState state;
   readonly attribute DOMString[] objectStoreNames; // implemented in FF
-  readonly attribute Promise<any> promise;
+  readonly attribute Promise<any> complete;
 
   Promise<any> waitUntil(Promise<any> p);
 };
 ```
 
-The `promise` attribute is a convenience to allow IDBTransaction objects to be used in Promise chains. It is roughly equivalent to:
+The `complete` attribute is a convenience to allow IDBTransaction objects to be used in Promise chains. It is roughly equivalent to:
 
 ```js
-Object.defineProperty(IDBTransaction.prototype, 'promise', {get: function() {
+Object.defineProperty(IDBTransaction.prototype, 'complete', {get: function() {
   var tx = this;
   return new Promise(function(resolve, reject) {
     if (tx.state === 'finished') {
@@ -57,7 +57,7 @@ Example:
 ```js
 var tx = db.transaction('my_store', 'readwrite');
 // ...
-tx.promise
+tx.complete
   .then(function() { console.log('committed'); })
   .catch(function(ex) { console.log('aborted: ' + ex.message); });
 ```
