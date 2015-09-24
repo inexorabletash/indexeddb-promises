@@ -19,7 +19,9 @@ SimpleStorage.prototype = {
 
   set: function(key, value) {
     return this._open().then(function(db) {
-      return db.tx('store', 'readwrite').objectStore('store').put(value, key).promise;
+      var tx = db.tx('store', 'readwrite');
+      tx.objectStore('store').put(value, key);
+      return tx.complete;
     });
   }
 };

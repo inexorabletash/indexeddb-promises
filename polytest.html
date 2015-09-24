@@ -26,7 +26,7 @@ r.onsuccess = function() {
   console.log('state >> ' + tx.state);
 
   (function() {
-    console.assert(tx.promise === tx.promise);
+    console.assert(tx.complete === tx.complete);
 
     var rq = s.get(0);
     console.assert(rq.promise === rq.promise);
@@ -54,7 +54,7 @@ r.onsuccess = function() {
      })
   );
 
-  tx.promise.then(function() {
+  tx.complete.then(function() {
     console.log('tx then, state >> ' + tx.state);
   }, function() {
     console.log('tx caught, state >> ' + tx.state);
