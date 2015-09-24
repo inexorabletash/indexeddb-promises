@@ -218,7 +218,7 @@ Here's how you'd fetch all keys in a range using a cursor:
 ```js
 async function getAll(store, query) {
   let result = [];
-  let cursor = await store.openCursor(query);
+  let cursor = await store.openCursor(query).promise;
   while (cursor) {
     result.push(cursor.value);
     cursor = await cursor.continue();
