@@ -40,7 +40,8 @@ The `complete` attribute is a convenience to allow IDBTransaction objects to be 
 ```js
 Object.defineProperty(IDBTransaction.prototype, 'complete', {get: function() {
   var tx = this;
-  return new Promise(function(resolve, reject) {
+  if (tx._promise) return tx._promise;
+  return tx._promise = new Promise(function(resolve, reject) {
     if (tx.state === 'finished') {
       if (tx.error)
         reject(tx.error);
@@ -67,7 +68,7 @@ Example (with proposed ES7 syntax extensions, assuming async context):
 let tx = db.transaction('my_store', 'readwrite');
 // ...
 try {
-  await tx.promise;
+  await tx.complete;
   console.log('committed');
 } catch (ex) {
   console.log('aborted: ' + ex.message);
@@ -119,8 +120,9 @@ The `promise` attribute is a convenience to allow IDBRequest objects to be used 
 
 ```js
 Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {
-  var rq = this;
-  return new Promise(function(resolve, reject) {
+  var rq = this
+  if (rq._promise) return rq._promise;
+  return rq._promise = new Promise(function(resolve, reject) {
     if (rq.readyState === 'done') {
       if (rq.error)
         reject(request.error);
