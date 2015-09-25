@@ -62,7 +62,6 @@ var tx = db.transaction('my_store', 'readwrite');
 tx.complete
   .then(function() { console.log('committed'); })
   .catch(function(ex) { console.log('aborted: ' + ex.message); });
-```
 
 // ES2016:
 let tx = db.transaction('my_store', 'readwrite');
