@@ -1,27 +1,25 @@
-// Minimal async key/value store. For simplicity, it doesn't keep a connection open.
+// Minimal async key/value store
 
 function SimpleStorage(name) {
-  this.name = name;
+  var open = indexedDB.open(this.name);
+  open.upgradeneeded = function(e) { e.target.result.createObjectStore('store'); };
+  this.dbp = open.promise;
 }
 
 SimpleStorage.prototype = {
-  _open: function() {
-    var r = indexedDB.open(this.name);
-    r.upgradeneeded = function(e) { e.target.result.createObjectStore('store'); };
-    return r.promise;
-  },
-
   get: function(key) {
-    return this._open().then(function(db) {
-      return db.tx('store').objectStore('store').get(key).promise;
+    return this.dbp.then(function(db) {
+      return db.transaction('store').objectStore('store').get(key).promise;
     });
   },
 
   set: function(key, value) {
-    return this._open().then(function(db) {
-      var tx = db.tx('store', 'readwrite');
+    return this.dbp.then(function(db) {
+      var tx = db.transaction('store', 'readwrite');
       tx.objectStore('store').put(value, key);
       return tx.complete;
     });
   }
+
+  // has(), remove(), and clear() are left as an exercise for the reader.
 };
