@@ -56,6 +56,7 @@ Object.defineProperty(IDBTransaction.prototype, 'complete', {get: function() {
 ```
 Example:
 ```js
+// ES2015:
 var tx = db.transaction('my_store', 'readwrite');
 // ...
 tx.complete
@@ -63,8 +64,7 @@ tx.complete
   .catch(function(ex) { console.log('aborted: ' + ex.message); });
 ```
 
-Example (with proposed ES7 syntax extensions, assuming async context):
-```js
+// ES2016:
 let tx = db.transaction('my_store', 'readwrite');
 // ...
 try {
@@ -135,16 +135,17 @@ Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {
   });
 }, enumerable: true, configurable: true});
 ```
+> The above shim does NOT cover the cursor iteration cases; see (polyfill.js)[polyfill.js] for a more complete approximation.
+
 
 Example:
 ```js
+// ES2015
 var tx = db.transaction('my_store');
 tx.objectStore('my_store').get(key).promise
   .then(function(result) { console.log('got: ' + result); });
-```
 
-ES7:
-```js
+// ES2016:
 let tx = db.transaction('my_store');
 let result = await tx.objectStore('my_store').get(key).promise;
 console.log('got: ' + result);
@@ -152,8 +153,8 @@ console.log('got: ' + result);
 
 Multiple database operations can be chained as long as control does not return to the event loop. For example:
 
-ES7:
 ```js
+// ES2016:
 async function increment(store, key) {
   let tx = db.transaction(store, 'readwrite');
   let value = await tx.objectStore(store).get(key);
@@ -182,7 +183,7 @@ async function incrementSlowlyBROKEN(store, key) {
   // but here, control returns to the event loop, so
   // the transaction will auto-commit and this
   // next call will fail:
-  await tx.objectStore(store).put(value + 1);  
+  await tx.objectStore(store).put(value + 1);
   await tx.complete;
 }
 ```
@@ -194,7 +195,7 @@ async function incrementSlowly(store, key) {
   tx.waitUntil((async function() {
     let value = await tx.objectStore(store).get(key).promise;
     await sleep(500);
-    await tx.objectStore(store).put(value + 1).promise;  
+    await tx.objectStore(store).put(value + 1).promise;
   }()));
   await tx.complete;
 }
@@ -202,28 +203,51 @@ async function incrementSlowly(store, key) {
 
 ### Cursors ###
 
-The requests returned when opening cursors behave differently than most requests: the `success` event can fire repeatedly. Initially when the cursor is returned, and then on each iteration of the cursor.
-
-The IDBRequest member `promise()` as defined above already only captures the first success/error result, which for `openCursor()` and `openKeyCursor()` on IDBObjectStore and IDBIndex will effectively be `Promise<IDBCursor?>`. Further iterations are lost.
+The requests returned when opening cursors behave differently than most requests: the `success` event can fire repeatedly. Initially when the cursor is returned, and then on each iteration of the cursor. A Promise only returns one value, but just as the `readyState` is reset when a cursor is iterated the `promise` is as well - a new Promise is used for each step.
 
 ```
 partial interface IDBCursor {
-  Promise<IDBCursor?> advance([EnforceRange] unsigned long count);
-  Promise<IDBCursor?> continue(optional any key);
+  IDBRequest advance([EnforceRange] unsigned long count);
+  IDBRequest continue(optional any key);
 };
 ```
 
-The cursor iteration methods (`continue()` and `advance()`) now return `Promise<IDBCursor?>`. *NB: Previously they were void methods, so this is backwards-compatible.* The promise resolves with `null` if the iteration is complete, otherwise it is resolved with the same cursor object with the `key`, `primaryKey`, and `value` attributes will be updated as appropriate, just as with event-based iteration.
+As a convenience, cursor iteration methods (`continue()` and `advance()`) now return `IDBRequest`. *NB: Previously they were void methods, so this is backwards-compatible.* This is the same `IDBRequest` instance returned when the cursor is opened. The behavior with event-based iteration is exactly the same, but a new Promise is used.
 
+```js
+var rq_open = store.openCursor();
+var p1 = rq_open.promise;
+rq_open.promise.then(function(cursor) {
+  assert(rq_open.promise === p1);
+  assert(rq_open.readyState === "done");
+
+  var rq_continue = cursor.continue();
+
+  assert(rq_continue === rq_open);
+  assert(rq_open.promise !== p1);
+  assert(rq_open.readyState === "pending");
+});
+```
 Here's how you'd fetch all keys in a range using a cursor:
 
 ```js
+// ES2015:
+function getAll(store, query) {
+  var result = [];
+  return store.openCursor(query).promise.then(function iter(cursor) {
+    if (!cursor) return result;
+    result.push(cursor.value);
+    return cursor.continue().promise.then(iter);
+  });
+}
+
+// ES2016:
 async function getAll(store, query) {
   let result = [];
   let cursor = await store.openCursor(query).promise;
   while (cursor) {
     result.push(cursor.value);
-    cursor = await cursor.continue();
+    cursor = await cursor.continue().promise;
   }
   return result;
 }
@@ -233,4 +257,9 @@ async function getAll(store, query) {
 
 * With the `waitUntil()` mechanism it is possible to create transactions that will never complete, e.g. `waitUntil(new Promise())`. This introduces the possibility of deadlocks. But this is possible today with "busy waiting" transactions - in fact, locking primitives like Mutexes can already be created using IDB. See https://gist.github.com/inexorabletash/fbb4735a2e6e8c115a7e
 
-* Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks. Fortunately, with ES7 async/await syntax, asynchronous errors can also be handled by try/catch blocks.
+* Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks. Fortunately, with ES2016 async/await syntax, asynchronous errors can also be handled by try/catch blocks.
+
+
+### Thanks ###
+
+Thanks to Alex Russell, Jake Archibald, Domenic Denicola, Marcos Caceres, and Daniel Murphy for guidance and feedback.

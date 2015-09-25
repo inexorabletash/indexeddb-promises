@@ -375,22 +375,26 @@
         var $this = this, $arguments = arguments;
         var tx = transactionFor(this);
 
+        var request;
         if (tx.state !== 'waiting') {
           method.apply(this, arguments);
+          request = this._request;
         } else {
+          var proxy = new IDBRequestProxy();
           tx._queue.push(function() {
             // TODO: Handle exceptions due to bad arguments
             // (in a real implementation those would be synchronous)
             method.apply($this, $arguments);
+            proxy._provide($this._request);
           });
+          request = proxy;
         }
 
-        return new Promise(function(resolve, reject) {
-          $this._request.addEventListener('success', function handler(e) {
-            e.target.removeEventListener('success', handler);
-            resolve(e.target.result);
-          });
-        });
+        // Reset request's internal promise, just as request's
+        // readyState is reset.
+        request._promise = promiseForRequest(request);
+
+        return request;
       };
     });
   });
