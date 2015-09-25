@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<title>IDBTransaction.waitUntil()</title>
 <script src="polyfill.js"></script>
 <script>
 'use strict';
@@ -9,17 +10,17 @@ function sleep(ms) {
   });
 }
 
-var r = indexedDB.open('db' + Date.now());
-r.onupgradeneeded = function() {
-  var db = r.result;
+var open = indexedDB.open('db' + Date.now());
+open.onupgradeneeded = function() {
+  var db = open.result;
   var s = db.createObjectStore('squares');
   for (var i = 0; i < 10; ++i) {
     s.put(i * i, i);
   }
 };
 
-r.onsuccess = function() {
-  var db = r.result;
+open.onsuccess = function() {
+  var db = open.result;
   console.log('-- creating tx --');
   var tx = db.transaction('squares');
   var s = tx.objectStore('squares');
@@ -58,27 +59,6 @@ r.onsuccess = function() {
     console.log('tx then, state >> ' + tx.state);
   }, function() {
     console.log('tx caught, state >> ' + tx.state);
-  });
-
-  sleep(100).then(function() {
-    console.log('-- creating tx2 --');
-    var tx2 = db.transaction('squares');
-    var store = tx2.objectStore('squares');
-    console.log('tx2 state >> ' + tx2.state);
-    var spin = true;
-    (function wait() {
-      if (spin)
-        store.get(0).onsuccess = wait;
-      else
-        console.log('tx2 state >> ' + tx2.state);
-    }());
-    setTimeout(function() {
-      console.log('tx2 state >> ' + tx2.state);
-      spin = false;
-    }, 0);
-    tx2.oncomplete = function() {
-      console.log('tx2 state >> ' + tx2.state);
-    };
   });
 };
 

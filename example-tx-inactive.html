@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<title>IDBTransaction.state inactive</title>
+<script src="polyfill.js"></script>
+<script>
+'use strict';
+
+var open = indexedDB.open('db' + Date.now());
+open.onupgradeneeded = function() {
+  var db = open.result;
+  var s = db.createObjectStore('squares');
+  for (var i = 0; i < 10; ++i) {
+    s.put(i * i, i);
+  }
+};
+
+open.onsuccess = function() {
+  var db = open.result;
+  console.log('-- creating tx2 --');
+  var tx2 = db.transaction('squares');
+  var store = tx2.objectStore('squares');
+  console.log('tx2 state >> ' + tx2.state);
+  var spin = true;
+  (function wait() {
+    if (spin)
+      store.get(0).onsuccess = wait;
+    else
+      console.log('tx2 state >> ' + tx2.state);
+  }());
+  setTimeout(function() {
+    console.log('tx2 state >> ' + tx2.state);
+    spin = false;
+  }, 0);
+  tx2.oncomplete = function() {
+      console.log('tx2 state >> ' + tx2.state);
+  };
+};
+
+</script>
