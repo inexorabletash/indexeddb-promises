@@ -373,7 +373,7 @@
       if (!method) return;
       type.prototype[methodName] = function() {
         var $this = this, $arguments = arguments;
-        var tx = transactionFor(this);
+        var tx = transactionFor(this.source);
 
         var request;
         if (tx.state !== 'waiting') {

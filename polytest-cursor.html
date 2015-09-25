@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<script src="polyfill.js"></script>
+<script>
+'use strict';
+
+var open = indexedDB.open('db' + Date.now());
+open.onupgradeneeded = function() {
+  var db = open.result;
+  var s = db.createObjectStore('squares');
+  for (var i = 0; i < 10; ++i) {
+    s.put(i * i, i);
+  }
+};
+
+open.onsuccess = function() {
+  var db = open.result;
+  var tx = db.transaction('squares');
+  var s = tx.objectStore('squares');
+
+  s.openCursor().promise.then(function iter(cursor) {
+    if (!cursor) return;
+    console.log(cursor.key + ' => ' + cursor.value);
+    cursor.continue().promise.then(iter);
+  });
+};
+
+</script>
