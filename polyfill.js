@@ -187,7 +187,7 @@
         }
       },
 
-      promise: {
+      complete: {
         get: function() {
           return this._promise;
         }, enumerable: true, configurable: true
