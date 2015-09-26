@@ -132,7 +132,7 @@ Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {
 
 The `promise` attribute returns the same Promise instance each time it is accessed, unless the readyState of the request is reset by iterating a cursor associated with the request (see below). Once that occurs, the `promise` attribute returns a new Promise instance, but again the same Promise instance each time, until the cursor is iterated once more.
 
-> The above shim does NOT cover the cursor iteration cases; see (polyfill.js)[polyfill.js] for a more complete approximation.
+> The above shim does NOT cover the cursor iteration cases; see [polyfill.js](polyfill.js) for a more complete approximation.
 
 Example:
 ```js
