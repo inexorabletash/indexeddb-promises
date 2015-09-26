@@ -30,7 +30,7 @@ partial interface IDBTransaction {
   readonly attribute IDBTransactionState state;
   readonly attribute Promise<any> complete;
 
-  Promise<any> waitUntil(Promise<any> p);
+  void waitUntil(Promise<any> p);
 };
 ```
 
@@ -89,15 +89,12 @@ The transaction's *active* flag is replaced by a *state* which can be one of: "a
 
 *NB: The above matches the behavior of IDB "v1".*
 
+* Transaction now have a set of **extend lifetime promises**
 * If `waitUntil(p)` is called and *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned.
-* Otherwise, *state* is set to "waiting". The transaction now _waits_ on the Promise `p`.
-* If `p` rejects, the transaction aborts.
-* If `p` fulfills, the *state* is set to "committing" and the transaction attempts to commit.
+* Otherwise, *state* is set to "waiting", and `p` is added to the set of **extend lifetime promises**. (The transaction now _waits_ on the Promise `p`.)
+* If any promise in **extend lifetime promises** rejects, the transaction aborts.
+* Once all of the promises in **extend lifetime promises** fulfill, the *state* is set to "committing" and the transaction attempts to commit.
 * An explicit `abort()` call still also aborts the transaction immediately, and the promise resolution is ignored.
-
-If a transaction is already waiting on Promise `p` and `waitUntil(q)` is called, then the transaction should instead wait on a new Promise equivalent to `p.then(() => q)`.
-
-> ISSUE: Return value of waitUntil()? Options include (1) a Promise dependent on the promise the transaction is waiting on (2) just whatever is passed in (3) `undefined`?*
 
 The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope, but it was not exposed as an attribute.*
 
