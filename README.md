@@ -101,9 +101,6 @@ If a transaction is already waiting on Promise `p` and `waitUntil(q)` is called,
 
 The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope, but it was not exposed as an attribute.*
 
-
-> ISSUE: Add a timeout to transactions. Maybe make this mandatory if waitUntil() is used?
-
 ### Requests ###
 
 ```webidl
