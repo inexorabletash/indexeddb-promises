@@ -75,6 +75,9 @@ try {
 }
 ```
 
+The `complete` attribute returns the same Promise instance each time it is accessed.
+
+
 Transactions grow a `waitUntil()` method similar to [ExtendableEvent](https://slightlyoff.github.io/ServiceWorker/spec/service_worker/index.html#extendable-event), and have a associated set of **extend lifetime promises**.
 
 The transaction's *active* flag is replaced by a *state* which can be one of: "active", "inactive", "waiting", "committing", and "finished".
@@ -126,8 +129,10 @@ Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {
   });
 }, enumerable: true, configurable: true});
 ```
-> The above shim does NOT cover the cursor iteration cases; see (polyfill.js)[polyfill.js] for a more complete approximation.
 
+The `promise` attribute returns the same Promise instance each time it is accessed, unless the readyState of the request is reset by iterating a cursor associated with the request (see below). Once that occurs, the `promise` attribute returns a new Promise instance, but again the same Promise instance each time, until the cursor is iterated once more.
+
+> The above shim does NOT cover the cursor iteration cases; see (polyfill.js)[polyfill.js] for a more complete approximation.
 
 Example:
 ```js
@@ -142,20 +147,22 @@ let result = await tx.objectStore('my_store').get(key).promise;
 console.log('got: ' + result);
 ```
 
+### Advanced Usage ###
+
 Multiple database operations can be chained as long as control does not return to the event loop. For example:
 
 ```js
 // ES2016:
 async function increment(store, key) {
   let tx = db.transaction(store, 'readwrite');
-  let value = await tx.objectStore(store).get(key);
+  let value = await tx.objectStore(store).get(key).promise;
   // in follow-on microtask, but control hasn't returned to event loop
-  await tx.objectStore(store).put(value + 1);
+  await tx.objectStore(store).put(value + 1).promise;
   await tx.complete; // Ensure it commits
 }
 ```
 
-Note that they do not implicitly cause the transaction to wait until the returned promise is resolved, as that would not help in the following scenario. Assume this helper:
+Note that accessing they a request's `promise` does not implicitly cause the transaction to wait until the returned promise is resolved, as that would not help in the following scenario. Assume this helper:
 
 ```js
 function sleep(ms) {
@@ -168,13 +175,13 @@ This would fail:
 ```js
 async function incrementSlowlyBROKEN(store, key) {
   let tx = db.transaction(store, 'readwrite');
-  let value = await tx.objectStore(store).get(key);
+  let value = await tx.objectStore(store).get(key).promise;
   // in follow-on microtask...
   await sleep(500);
   // but here, control returns to the event loop, so
   // the transaction will auto-commit and this
   // next call will fail:
-  await tx.objectStore(store).put(value + 1);
+  await tx.objectStore(store).put(value + 1).promise;
   await tx.complete;
 }
 ```
@@ -194,7 +201,7 @@ async function incrementSlowly(store, key) {
 
 ### Cursors ###
 
-The requests returned when opening cursors behave differently than most requests: the `success` event can fire repeatedly. Initially when the cursor is returned, and then on each iteration of the cursor. A Promise only returns one value, but just as the `readyState` is reset when a cursor is iterated the `promise` is as well - a new Promise is used for each step.
+The requests returned when opening cursors behave differently than most requests: the `success` event can fire repeatedly. Initially when the cursor is returned, and then on each iteration of the cursor. A Promise only returns one value, but just as the `readyState` is reset when a cursor is iterated the `promise` is as well - a new Promise is used for each iteration step.
 
 ```
 partial interface IDBCursor {
@@ -219,8 +226,8 @@ rq_open.promise.then(function(cursor) {
   assert(rq_open.readyState === "pending");
 });
 ```
-Here's how you'd fetch all keys in a range using a cursor:
 
+Here's how you'd fetch all keys in a range using a cursor:
 ```js
 // ES2015:
 function getAll(store, query) {
