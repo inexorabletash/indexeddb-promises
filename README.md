@@ -16,6 +16,8 @@ Indexed DB transactions compose poorly with Promises.
 
 [Transactions](https://dvcs.w3.org/hg/IndexedDB/raw-file/tip/Overview.html#transaction-concept) are defined as having an *active* flag that is set when the transaction is created, and when an IDB event callback from a source associated with that transaction is run. The *active* flag is cleared when the task completes i.e. when control returns from script; for example, at the end of the callback. Operations within a transaction (put, get, etc) are only permitted when the flag is true. This implies that you cannot perform operations within a Promise callback, since it is by definition not an IDB event callback. Further, transactions automatically attempt to commit when the flag is cleared and there are no pending requests. This implies that even if the previous restriction was lifted, the transaction would commit before any Promise callback fired. If the *active* flag mechanism were to be removed entirely, a new commit model would need to be introduced.
 
+### The Proposal ###
+
 Here's a possible incremental evolution of the IDB API to interoperate with promises. It can be summarized as two separate but complementary additions to the API:
 
 * Improve integration with other Promise-based code by adding a `.promise` affordance to `IDBRequest` and a similar `.complete` affordance to `IDBTransaction`
@@ -73,7 +75,7 @@ try {
 }
 ```
 
-Transactions grow a `waitUntil()` method similar to [ExtendableEvent](https://slightlyoff.github.io/ServiceWorker/spec/service_worker/index.html#extendable-event).
+Transactions grow a `waitUntil()` method similar to [ExtendableEvent](https://slightlyoff.github.io/ServiceWorker/spec/service_worker/index.html#extendable-event), and have a associated set of **extend lifetime promises**.
 
 The transaction's *active* flag is replaced by a *state* which can be one of: "active", "inactive", "waiting", "committing", and "finished".
 
@@ -89,11 +91,10 @@ The transaction's *active* flag is replaced by a *state* which can be one of: "a
 
 *NB: The above matches the behavior of IDB "v1".*
 
-* Transaction now have a set of **extend lifetime promises**
 * If `waitUntil(p)` is called and *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned.
-* Otherwise, *state* is set to "waiting", and `p` is added to the set of **extend lifetime promises**. (The transaction now _waits_ on the Promise `p`.)
-* If any promise in **extend lifetime promises** rejects, the transaction aborts.
-* Once all of the promises in **extend lifetime promises** fulfill, the *state* is set to "committing" and the transaction attempts to commit.
+* Otherwise, *state* is set to "waiting", and `p` is added to the transaction's set of **extend lifetime promises**. (The transaction now _waits_ on the Promise `p`.)
+* If any promise in the transaction's **extend lifetime promises** rejects, the transaction aborts.
+* Once all of the promises in the transaction's **extend lifetime promises** fulfill, the *state* is set to "committing" and the transaction attempts to commit.
 * An explicit `abort()` call still also aborts the transaction immediately, and the promise resolution is ignored.
 
 The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope, but it was not exposed as an attribute.*

@@ -135,19 +135,18 @@
           var state = this.state;
 
           if (state === 'inactive') {
-            // Throw or Reject?
-            return Promise.reject(makeDOMException(
-              'InvalidStateError', 'The transaction is inactive.'));
+            throw makeDOMException(
+              'InvalidStateError', 'The transaction is inactive.');
           }
 
           if (state === 'committing') {
-            return Promise.reject(makeDOMException(
-              'InvalidStateError', 'The transaction is already committing.'));
+            throw makeDOMException(
+              'InvalidStateError', 'The transaction is already committing.');
           }
 
           if (state === 'finished') {
-            return Promise.reject(makeDOMException(
-              'InvalidStateError', 'The transaction is finished.'));
+            throw makeDOMException(
+              'InvalidStateError', 'The transaction is finished.');
           }
 
           if (state === 'waiting') {
@@ -182,8 +181,6 @@
             // TODO: Abort if any waiting promise rejects?
             try { $this.abort(); } catch(_) {}
           });
-
-          return Promise.resolve(this._waitingPromise);
         }
       },
 
