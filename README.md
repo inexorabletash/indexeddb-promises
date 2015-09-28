@@ -96,6 +96,7 @@ The transaction's *active* flag is replaced by a *state* which can be one of: "a
 *NB: The above matches the behavior of IDB "v1".*
 
 When __waitUntil(*p*)__, the following steps are performed:
+
 1. If *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned.
 2. Otherwise, *state* is set to "waiting", and `p` is added to the transaction's set of **extend lifetime promises**. (The transaction now _waits_ on the Promise `p`.)
 
