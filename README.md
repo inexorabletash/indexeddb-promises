@@ -18,10 +18,11 @@ Indexed DB transactions compose poorly with Promises.
 
 ### The Proposal ###
 
-Here's a possible incremental evolution of the IDB API to interoperate with promises. It can be summarized as two separate but complementary additions to the API:
+Here's a possible incremental evolution of the IDB API to interoperate with promises. It can be summarized as three separate but complementary additions to the API:
 
 * Improve integration with other Promise-based code by adding a `.promise` affordance to `IDBRequest` and a similar `.complete` affordance to `IDBTransaction`
 * Extend the transaction lifecycle model by allowing a transaction to _wait_ on a Promise
+* Have cursor iteration methods return the associated request, to allow easier Promise-based iteration.
 
 ### Transactions ###
 
