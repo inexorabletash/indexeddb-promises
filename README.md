@@ -185,7 +185,7 @@ async function incrementSlowlyBROKEN(store, key) {
   await tx.complete;
 }
 ```
-At the point where the `sleep()` call is made the the associated transaction would commit as there is no further work. Instead, this structure must be used:
+At the point where the `sleep()` call is made the the associated transaction would commit as there is no further work. Instead, this "immediately invoked async function expression" structure must be used:
 
 ```js
 async function incrementSlowly(store, key) {
@@ -198,6 +198,8 @@ async function incrementSlowly(store, key) {
   await tx.complete;
 }
 ```
+
+> Is "IIAFE" is a thing now? If so, I propose we pronounce it "yah-fee"
 
 ### Cursors ###
 
