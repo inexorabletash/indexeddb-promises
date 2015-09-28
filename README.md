@@ -2,7 +2,7 @@
 
 Further thinking about what a Promise-friendly version of IDB could look like.
 
-> STATUS: Serious proposal, but may want to solve pan-storage transactions first. Actively soliciting feedback.
+> STATUS: Serious proposal, but may want to solve [pan-storage transactions](https://gist.github.com/inexorabletash/a53c6add9fbc8b9b1191) first. Actively soliciting feedback.
 
 See also:
 
