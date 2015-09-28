@@ -95,10 +95,13 @@ The transaction's *active* flag is replaced by a *state* which can be one of: "a
 
 *NB: The above matches the behavior of IDB "v1".*
 
-* If `waitUntil(p)` is called and *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned.
-* Otherwise, *state* is set to "waiting", and `p` is added to the transaction's set of **extend lifetime promises**. (The transaction now _waits_ on the Promise `p`.)
-* If any promise in the transaction's **extend lifetime promises** rejects, the transaction aborts.
-* Once all of the promises in the transaction's **extend lifetime promises** fulfill, the *state* is set to "committing" and the transaction attempts to commit.
+When __waitUntil(*p*)__, the following steps are performed:
+1. If *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned.
+2. Otherwise, *state* is set to "waiting", and `p` is added to the transaction's set of **extend lifetime promises**. (The transaction now _waits_ on the Promise `p`.)
+
+The transaction lifecycle is extended with:
+* If *state* is "waiting" and any promise in the transaction's **extend lifetime promises** rejects, the transaction aborts.
+* If *state* is "waiting", then once all of the promises in the transaction's **extend lifetime promises** fulfill, the *state* is set to "committing" and the transaction attempts to commit.
 * An explicit `abort()` call still also aborts the transaction immediately, and the promise resolution is ignored.
 
 The `state` attribute reflects the internal *state* of the transaction. *NB: Previously the internal active flag's state could be probed by attempting a `get()` call on one of the stores in the transaction's scope, but it was not exposed as an attribute.*
