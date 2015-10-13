@@ -31,9 +31,9 @@ enum IDBTransactionState {  "active", "inactive", "waiting", "committing", "fini
 
 partial interface IDBTransaction {
   readonly attribute IDBTransactionState state;
-  readonly attribute Promise<any> complete;
+  readonly attribute Promise<void> complete;
 
-  void waitUntil(Promise<any> p);
+  Promise<void> waitUntil(Promise<any> p);
 };
 ```
 
@@ -99,6 +99,7 @@ When __waitUntil(*p*)__, the following steps are performed:
 
 1. If *state* is "committing" or "finished", a new Promise rejected with `TypeError` is returned.
 2. Otherwise, *state* is set to "waiting", and `p` is added to the transaction's set of **extend lifetime promises**. (The transaction now _waits_ on the Promise `p`.)
+3. Return the same Promise instance returned by the `complete` attribute.
 
 The transaction lifecycle is extended with:
 * If *state* is "waiting" and any promise in the transaction's **extend lifetime promises** rejects, the transaction aborts.

@@ -181,6 +181,8 @@
             // TODO: Abort if any waiting promise rejects?
             try { $this.abort(); } catch(_) {}
           });
+
+          return this._promise;
         }
       },
 
