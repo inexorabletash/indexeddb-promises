@@ -18,10 +18,10 @@ open.onsuccess = function() {
   var tx = db.transaction('squares');
   var s = tx.objectStore('squares');
 
-  s.openCursor().promise.then(function iter(cursor) {
+  s.openCursor().ready.then(function iter(cursor) {
     if (!cursor) return;
     console.log(cursor.key + ' => ' + cursor.value);
-    cursor.continue().promise.then(iter);
+    cursor.continue().ready.then(iter);
   });
 };
 

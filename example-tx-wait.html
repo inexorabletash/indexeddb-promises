@@ -30,12 +30,12 @@ open.onsuccess = function() {
     console.assert(tx.complete === tx.complete);
 
     var rq = s.get(0);
-    console.assert(rq.promise === rq.promise);
+    console.assert(rq.ready === rq.ready);
   }());
 
   var rq, rq2, p2;
   tx.waitUntil(
-    rq = s.get(3).promise
+    rq = s.get(3).ready
      .then(function(result) {
        console.log('tx state >> ' + tx.state);
        console.log('result >> ' + result);
@@ -44,11 +44,11 @@ open.onsuccess = function() {
      .then(function() {
        console.log('tx state >> ' + tx.state);
        rq2 = s.get(5);
-       p2 = rq2.promise;
+       p2 = rq2.ready;
        return p2;
      })
      .then(function(result) {
-       console.assert(p2 === rq2.promise);
+       console.assert(p2 === rq2.ready);
        console.log('tx state >> ' + tx.state);
        console.log('result >> ' + result);
        return sleep(10);

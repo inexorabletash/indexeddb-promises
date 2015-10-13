@@ -3,13 +3,13 @@
 function SimpleStorage(name) {
   var open = indexedDB.open(this.name);
   open.upgradeneeded = function(e) { e.target.result.createObjectStore('store'); };
-  this.dbp = open.promise;
+  this.dbp = open.ready;
 }
 
 SimpleStorage.prototype = {
   get: function(key) {
     return this.dbp.then(function(db) {
-      return db.transaction('store').objectStore('store').get(key).promise;
+      return db.transaction('store').objectStore('store').get(key).ready;
     });
   },
 

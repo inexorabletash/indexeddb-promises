@@ -258,9 +258,9 @@
       return undefined;
     },
 
-    get promise() {
+    get ready() {
       if (this._request)
-        return this._request.promise;
+        return this._request.ready;
       return this._promise;
     },
 
@@ -396,11 +396,11 @@
     });
   });
 
-  // IDBRequest convenience attribute: promise
+  // IDBRequest convenience attribute: ready
   // These use _promise which will only resolve on the first success/error.
   Object.defineProperties(
     IDBRequest.prototype, {
-      promise: {
+      ready: {
         get: function() {
           if (!this._promise) throw Error('unhooked request');
           return this._promise;

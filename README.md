@@ -20,7 +20,7 @@ Indexed DB transactions compose poorly with Promises.
 
 Here's a possible incremental evolution of the IDB API to interoperate with promises. It can be summarized as three separate but complementary additions to the API:
 
-* Improve integration with other Promise-based code by adding a `.promise` affordance to `IDBRequest` and a similar `.complete` affordance to `IDBTransaction`
+* Improve integration with other Promise-based code by adding a `.ready` affordance to `IDBRequest` and a similar `.complete` affordance to `IDBTransaction`
 * Extend the transaction lifecycle model by allowing a transaction to _wait_ on a Promise
 * Have cursor iteration methods return the associated request, to allow easier Promise-based iteration.
 
@@ -111,14 +111,14 @@ The `state` attribute reflects the internal *state* of the transaction. *NB: Pre
 
 ```webidl
 partial interface IDBRequest {
-  readonly attribute Promise<any> promise;
+  readonly attribute Promise<any> ready;
 };
 ```
 
-The `promise` attribute is a convenience to allow IDBRequest objects to be used in Promise chains. It is roughly equivalent to:
+The `ready` attribute is a convenience to allow IDBRequest objects to be used in Promise chains. It is roughly equivalent to:
 
 ```js
-Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {
+Object.prototype.defineProperty(IDBRequest.prototype, 'ready', {get: {
   var rq = this
   if (rq._promise) return rq._promise;
   return rq._promise = new Promise(function(resolve, reject) {
@@ -135,7 +135,7 @@ Object.prototype.defineProperty(IDBRequest.prototype, 'promise', {get: {
 }, enumerable: true, configurable: true});
 ```
 
-The `promise` attribute returns the same Promise instance each time it is accessed, unless the readyState of the request is reset by iterating a cursor associated with the request (see below). Once that occurs, the `promise` attribute returns a new Promise instance, but again the same Promise instance each time, until the cursor is iterated once more.
+The `ready` attribute returns the same Promise instance each time it is accessed, unless the readyState of the request is reset by iterating a cursor associated with the request (see below). Once that occurs, the `ready` attribute returns a new Promise instance, but again the same Promise instance each time, until the cursor is iterated once more.
 
 > The above shim does NOT cover the cursor iteration cases; see [polyfill.js](polyfill.js) for a more complete approximation.
 
@@ -143,12 +143,12 @@ Example:
 ```js
 // ES2015
 var tx = db.transaction('my_store');
-tx.objectStore('my_store').get(key).promise
+tx.objectStore('my_store').get(key).ready
   .then(function(result) { console.log('got: ' + result); });
 
 // ES2016:
 let tx = db.transaction('my_store');
-let result = await tx.objectStore('my_store').get(key).promise;
+let result = await tx.objectStore('my_store').get(key).ready;
 console.log('got: ' + result);
 ```
 
@@ -160,14 +160,14 @@ Multiple database operations can be chained as long as control does not return t
 // ES2016:
 async function increment(store, key) {
   let tx = db.transaction(store, 'readwrite');
-  let value = await tx.objectStore(store).get(key).promise;
+  let value = await tx.objectStore(store).get(key).ready;
   // in follow-on microtask, but control hasn't returned to event loop
-  await tx.objectStore(store).put(value + 1).promise;
+  await tx.objectStore(store).put(value + 1).ready;
   await tx.complete; // Ensure it commits
 }
 ```
 
-Note that accessing they a request's `promise` does not implicitly cause the transaction to wait until the returned promise is resolved, as that would not help in the following scenario. Assume this helper:
+Note that accessing they a request's `ready` does not implicitly cause the transaction to wait until the returned promise is resolved, as that would not help in the following scenario. Assume this helper:
 
 ```js
 function sleep(ms) {
@@ -180,13 +180,13 @@ This would fail:
 ```js
 async function incrementSlowlyBROKEN(store, key) {
   let tx = db.transaction(store, 'readwrite');
-  let value = await tx.objectStore(store).get(key).promise;
+  let value = await tx.objectStore(store).get(key).ready;
   // in follow-on microtask...
   await sleep(500);
   // but here, control returns to the event loop, so
   // the transaction will auto-commit and this
   // next call will fail:
-  await tx.objectStore(store).put(value + 1).promise;
+  await tx.objectStore(store).put(value + 1).ready;
   await tx.complete;
 }
 ```
@@ -196,9 +196,9 @@ At the point where the `sleep()` call is made the the associated transaction wou
 async function incrementSlowly(store, key) {
   let tx = db.transaction(store, 'readwrite');
   tx.waitUntil((async function() {
-    let value = await tx.objectStore(store).get(key).promise;
+    let value = await tx.objectStore(store).get(key).ready;
     await sleep(500);
-    await tx.objectStore(store).put(value + 1).promise;
+    await tx.objectStore(store).put(value + 1).ready;
   }()));
   await tx.complete;
 }
@@ -208,7 +208,7 @@ async function incrementSlowly(store, key) {
 
 ### Cursors ###
 
-The requests returned when opening cursors behave differently than most requests: the `success` event can fire repeatedly. Initially when the cursor is returned, and then on each iteration of the cursor. A Promise only returns one value, but just as the `readyState` is reset when a cursor is iterated the `promise` is as well - a new Promise is used for each iteration step.
+The requests returned when opening cursors behave differently than most requests: the `success` event can fire repeatedly. Initially when the cursor is returned, and then on each iteration of the cursor. A Promise only returns one value, but just as the `readyState` is reset when a cursor is iterated the `ready` is as well - a new Promise is used for each iteration step.
 
 ```
 partial interface IDBCursor {
@@ -221,15 +221,15 @@ As a convenience, cursor iteration methods (`continue()` and `advance()`) now re
 
 ```js
 var rq_open = store.openCursor();
-var p1 = rq_open.promise;
-rq_open.promise.then(function(cursor) {
-  assert(rq_open.promise === p1);
+var p1 = rq_open.ready;
+rq_open.ready.then(function(cursor) {
+  assert(rq_open.ready === p1);
   assert(rq_open.readyState === "done");
 
   var rq_continue = cursor.continue();
 
   assert(rq_continue === rq_open);
-  assert(rq_open.promise !== p1);
+  assert(rq_open.ready !== p1);
   assert(rq_open.readyState === "pending");
 });
 ```
@@ -239,20 +239,20 @@ Here's how you'd fetch all keys in a range using a cursor:
 // ES2015:
 function getAll(store, query) {
   var result = [];
-  return store.openCursor(query).promise.then(function iter(cursor) {
+  return store.openCursor(query).ready.then(function iter(cursor) {
     if (!cursor) return result;
     result.push(cursor.value);
-    return cursor.continue().promise.then(iter);
+    return cursor.continue().ready.then(iter);
   });
 }
 
 // ES2016:
 async function getAll(store, query) {
   let result = [];
-  let cursor = await store.openCursor(query).promise;
+  let cursor = await store.openCursor(query).ready;
   while (cursor) {
     result.push(cursor.value);
-    cursor = await cursor.continue().promise;
+    cursor = await cursor.continue().ready;
   }
   return result;
 }
