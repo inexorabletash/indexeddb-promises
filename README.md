@@ -211,6 +211,8 @@ async function incrementSlowly(store, key) {
 
 The requests returned when opening cursors behave differently than most requests: the `success` event can fire repeatedly. Initially when the cursor is returned, and then on each iteration of the cursor. A Promise only returns one value, but just as the `readyState` is reset when a cursor is iterated the `ready` is as well - a new Promise is used for each iteration step.
 
+**NOTE**: See discussion in [Issue #8](https://github.com/inexorabletash/indexeddb-promises/issues/8) around async iterators. Some ideas there contradict this part of the proposal.
+
 ```
 partial interface IDBCursor {
   IDBRequest advance([EnforceRange] unsigned long count);
@@ -219,6 +221,8 @@ partial interface IDBCursor {
 ```
 
 As a convenience, cursor iteration methods (`continue()` and `advance()`) now return `IDBRequest`. *NB: Previously they were void methods, so this is backwards-compatible.* This is the same `IDBRequest` instance returned when the cursor is opened. The behavior with event-based iteration is exactly the same, but a new Promise is used.
+
+
 
 ```js
 var rq_open = store.openCursor();
@@ -238,9 +242,9 @@ rq_open.ready.then(function(cursor) {
 Here's how you'd fetch all keys in a range using a cursor:
 ```js
 // ES2015:
-function getAll(store, query) {
+function getAll(source, query) {
   var result = [];
-  return store.openCursor(query).ready.then(function iter(cursor) {
+  return source.openCursor(query).ready.then(function iter(cursor) {
     if (!cursor) return result;
     result.push(cursor.value);
     return cursor.continue().ready.then(iter);
@@ -248,9 +252,9 @@ function getAll(store, query) {
 }
 
 // ES2016:
-async function getAll(store, query) {
+async function getAll(source, query) {
   let result = [];
-  let cursor = await store.openCursor(query).ready;
+  let cursor = await source.openCursor(query).ready;
   while (cursor) {
     result.push(cursor.value);
     cursor = await cursor.continue().ready;
