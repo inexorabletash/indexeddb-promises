@@ -272,4 +272,5 @@ async function getAll(source, query) {
 
 ### Thanks ###
 
-Thanks to Alex Russell, Jake Archibald, Domenic Denicola, Marcos Caceres, and Daniel Murphy for guidance and feedback.
+Thanks to Alex Russell, Jake Archibald, Domenic Denicola, Marcos Caceres, Daniel Murphy and 
+Dan Ehrenberg for guidance and feedback.
