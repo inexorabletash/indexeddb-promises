@@ -65,7 +65,7 @@ tx.complete
   .then(function() { console.log('committed'); })
   .catch(function(ex) { console.log('aborted: ' + ex.message); });
 
-// ES2016:
+// ES-Future:
 let tx = db.transaction('my_store', 'readwrite');
 // ...
 try {
@@ -147,7 +147,7 @@ var tx = db.transaction('my_store');
 tx.objectStore('my_store').get(key).ready
   .then(function(result) { console.log('got: ' + result); });
 
-// ES2016:
+// ES-Future:
 let tx = db.transaction('my_store');
 let result = await tx.objectStore('my_store').get(key).ready;
 console.log('got: ' + result);
@@ -158,7 +158,7 @@ console.log('got: ' + result);
 Multiple database operations can be chained as long as control does not return to the event loop. For example:
 
 ```js
-// ES2016:
+// ES-Future:
 async function increment(store, key) {
   let tx = db.transaction(store, 'readwrite');
   let value = await tx.objectStore(store).get(key).ready;
@@ -251,7 +251,7 @@ function getAll(source, query) {
   });
 }
 
-// ES2016:
+// ES-Future:
 async function getAll(source, query) {
   let result = [];
   let cursor = await source.openCursor(query).ready;
@@ -267,7 +267,7 @@ async function getAll(source, query) {
 
 * With the `waitUntil()` mechanism it is possible to create transactions that will never complete, e.g. `waitUntil(new Promise())`. This introduces the possibility of deadlocks. But this is possible today with "busy waiting" transactions - in fact, locking primitives like Mutexes can already be created using IDB. See https://gist.github.com/inexorabletash/fbb4735a2e6e8c115a7e
 
-* Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks. Fortunately, with ES2016 async/await syntax, asynchronous errors can also be handled by try/catch blocks.
+* Methods that return requests still throw rather than reject on invalid input, so you must still use try/catch blocks. Fortunately, with [proposed async/await syntax](https://github.com/tc39/ecmascript-asyncawait), asynchronous errors can also be handled by try/catch blocks.
 
 
 ### Thanks ###
