@@ -211,7 +211,7 @@ async function incrementSlowly(store, key) {
 
 The requests returned when opening cursors behave differently than most requests: the `success` event can fire repeatedly. Initially when the cursor is returned, and then on each iteration of the cursor. A Promise only returns one value, but just as the `readyState` is reset when a cursor is iterated the `ready` is as well - a new Promise is used for each iteration step.
 
-**NOTE**: See discussion in [Issue #8](https://github.com/inexorabletash/indexeddb-promises/issues/8) around async iterators. Some ideas there contradict this part of the proposal.
+**NOTE**: _See discussion in [Issue #8](https://github.com/inexorabletash/indexeddb-promises/issues/8) around async iterators. Some ideas there contradict this part of the proposal._
 
 ```
 partial interface IDBCursor {
